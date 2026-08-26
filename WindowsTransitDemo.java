@@ -296,52 +296,51 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-        // 1. Top-Left Pane (Red / Orange)
         Path2D.Double redPane = new Path2D.Double();
-        redPane.moveTo(cx - 130, cy - 65);
-        redPane.curveTo(cx - 90, cy - 120, cx - 45, cy - 110, cx - 4, cy - 75); // Top wave
-        redPane.lineTo(cx - 4, cy - 10);                                       // Center vertical seam
-        redPane.curveTo(cx - 45, cy - 42, cx - 90, cy - 52, cx - 130, cy + 5);   // Middle wave
+        redPane.moveTo(cx - 100, cy - 95);
+        redPane.curveTo(cx - 65, cy - 110, cx - 35, cy - 108, cx - 7, cy - 93);
+        redPane.lineTo(cx - 7, cy - 7);
+        redPane.curveTo(cx - 35, cy - 22, cx - 65, cy - 24, cx - 100, cy - 9);
         redPane.closePath();
 
-        g2.setPaint(new GradientPaint(cx - 130, cy - 120, new Color(245, 95, 40, 225), 
-                                    cx - 4, cy - 10, new Color(210, 45, 25, 225)));
+        g2.setPaint(new GradientPaint(cx - 100, cy - 110, new Color(245, 95, 40, 225), 
+                                    cx - 7, cy - 7, new Color(210, 45, 25, 225)));
         g2.fill(redPane);
 
         // 2. Top-Right Pane (Green)
         Path2D.Double greenPane = new Path2D.Double();
-        greenPane.moveTo(cx + 4, cy - 71);
-        greenPane.curveTo(cx + 45, cy - 35, cx + 90, cy - 45, cx + 130, cy - 90); // Top wave
-        greenPane.lineTo(cx + 130, cy - 23);                                      // Right outer edge
-        greenPane.curveTo(cx + 90, cy + 22, cx + 45, cy + 32, cx + 4, cy - 4);     // Middle wave
+        greenPane.moveTo(cx + 7, cy - 93);
+        greenPane.curveTo(cx + 35, cy - 78, cx + 65, cy - 80, cx + 100, cy - 98);
+        greenPane.lineTo(cx + 100, cy - 14);
+        greenPane.curveTo(cx + 65, cy + 4, cx + 35, cy + 6, cx + 7, cy - 7);
         greenPane.closePath();
 
-        g2.setPaint(new GradientPaint(cx + 4, cy - 71, new Color(145, 215, 50, 225), 
-                                    cx + 130, cy - 23, new Color(75, 175, 30, 225)));
+        g2.setPaint(new GradientPaint(cx + 7, cy - 93, new Color(145, 215, 50, 225), 
+                                    cx + 100, cy - 14, new Color(75, 175, 30, 225)));
         g2.fill(greenPane);
 
         // 3. Bottom-Left Pane (Blue)
         Path2D.Double bluePane = new Path2D.Double();
-        bluePane.moveTo(cx - 130, cy + 13);
-        bluePane.curveTo(cx - 90, cy - 44, cx - 45, cy - 34, cx - 4, cy - 2);   // Middle wave
-        bluePane.lineTo(cx - 4, cy + 63);                                      // Center vertical seam
-        bluePane.curveTo(cx - 45, cy + 31, cx - 90, cy + 21, cx - 130, cy + 78); // Bottom wave
+        bluePane.moveTo(cx - 100, cy + 9);
+        bluePane.curveTo(cx - 65, cy - 6, cx - 35, cy - 4, cx - 7, cy + 7);
+        bluePane.lineTo(cx - 7, cy + 93);
+        bluePane.curveTo(cx - 35, cy + 78, cx - 65, cy + 76, cx - 100, cy + 91);
         bluePane.closePath();
 
-        g2.setPaint(new GradientPaint(cx - 130, cy - 34, new Color(35, 170, 245, 225), 
-                                    cx - 4, cy + 63, new Color(15, 100, 210, 225)));
+        g2.setPaint(new GradientPaint(cx - 100, cy - 6, new Color(35, 170, 245, 225), 
+                                    cx - 7, cy + 93, new Color(15, 100, 210, 225)));
         g2.fill(bluePane);
 
         // 4. Bottom-Right Pane (Yellow / Gold)
         Path2D.Double yellowPane = new Path2D.Double();
-        yellowPane.moveTo(cx + 4, cy + 4);
-        yellowPane.curveTo(cx + 45, cy + 40, cx + 90, cy + 30, cx + 130, cy - 15); // Middle wave
-        yellowPane.lineTo(cx + 130, cy + 50);                                      // Right outer edge
-        yellowPane.curveTo(cx + 90, cy + 95, cx + 45, cy + 105, cx + 4, cy + 69); // Bottom wave
+        yellowPane.moveTo(cx + 7, cy + 7);
+        yellowPane.curveTo(cx + 35, cy + 20, cx + 65, cy + 18, cx + 100, cy + 0);
+        yellowPane.lineTo(cx + 100, cy + 84);
+        yellowPane.curveTo(cx + 65, cy + 102, cx + 35, cy + 104, cx + 7, cy + 93);
         yellowPane.closePath();
 
-        g2.setPaint(new GradientPaint(cx + 4, cy + 4, new Color(255, 205, 30, 225), 
-                                    cx + 130, cy + 50, new Color(225, 150, 10, 225)));
+        g2.setPaint(new GradientPaint(cx + 7, cy + 7, new Color(255, 205, 30, 225), 
+                                    cx + 100, cy + 84, new Color(225, 150, 10, 225)));
         g2.fill(yellowPane);
     }
 
