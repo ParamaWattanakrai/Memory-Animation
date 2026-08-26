@@ -82,7 +82,6 @@ public class Windows11Demo extends JPanel implements Runnable {
     }
 
     private void drawDesktop(Graphics2D g2) {
-        // Windows 11 light blue background gradient
         GradientPaint bg = new GradientPaint(
                 0, 0, new Color(165, 195, 225),
                 W, H - TASKBAR_H, new Color(195, 215, 238)
@@ -90,7 +89,6 @@ public class Windows11Demo extends JPanel implements Runnable {
         g2.setPaint(bg);
         g2.fillRect(0, 0, W, H - TASKBAR_H);
 
-        // Radial glow center
         RadialGradientPaint centerGlow = new RadialGradientPaint(
                 new Point2D.Float(W * 0.5f, H * 0.4f), 400f,
                 new float[]{0.0f, 1.0f},
@@ -99,48 +97,47 @@ public class Windows11Demo extends JPanel implements Runnable {
         g2.setPaint(centerGlow);
         g2.fillRect(0, 0, W, H - TASKBAR_H);
 
-        // Windows 11 "Bloom" Folded Petal Mesh
         drawBloomPetals(g2);
     }
 
     private void drawBloomPetals(Graphics2D g2) {
         int cx = W / 2;
-        int bottomY = H - TASKBAR_H; // Touches the bottom desktop baseline
+        int bottomY = H - TASKBAR_H;
 
         // Layer 1: Dark Outer Fold
         Path2D.Double p1 = new Path2D.Double();
-        p1.moveTo(cx - 250, bottomY);
-        p1.curveTo(cx - 380, 20, cx - 180, 0, cx, 40);
-        p1.curveTo(cx + 260, 80, cx + 320, 260, cx + 200, bottomY);
+        p1.moveTo(cx - 215, bottomY);
+        p1.curveTo(cx - 320, 110, cx - 150, 50, cx, 80);
+        p1.curveTo(cx + 220, 120, cx + 260, 280, cx + 170, bottomY);
         p1.closePath();
-        g2.setPaint(new GradientPaint(cx - 150, 20, new Color(10, 45, 130), cx + 150, bottomY, new Color(0, 95, 210)));
+        g2.setPaint(new GradientPaint(cx - 120, 50, new Color(10, 45, 130), cx + 120, bottomY, new Color(0, 95, 210)));
         g2.fill(p1);
 
         // Layer 2: Vibrant Blue Fold
         Path2D.Double p2 = new Path2D.Double();
-        p2.moveTo(cx - 200, bottomY);
-        p2.curveTo(cx - 300, 70, cx - 80, 30, cx + 80, 90);
-        p2.curveTo(cx + 240, 160, cx + 220, 330, cx + 100, bottomY);
+        p2.moveTo(cx - 170, bottomY);
+        p2.curveTo(cx - 250, 150, cx - 70, 90, cx + 60, 130);
+        p2.curveTo(cx + 200, 180, cx + 185, 330, cx + 85, bottomY);
         p2.closePath();
-        g2.setPaint(new GradientPaint(cx - 120, 50, new Color(15, 115, 235), cx + 80, bottomY, new Color(0, 60, 175)));
+        g2.setPaint(new GradientPaint(cx - 100, 90, new Color(15, 115, 235), cx + 70, bottomY, new Color(0, 60, 175)));
         g2.fill(p2);
 
         // Layer 3: Cyan Highlight Ribbon
         Path2D.Double p3 = new Path2D.Double();
-        p3.moveTo(cx - 140, bottomY);
-        p3.curveTo(cx - 220, 130, cx - 20, 70, cx + 100, 130);
-        p3.curveTo(cx + 170, 200, cx + 140, 340, cx - 20, bottomY);
+        p3.moveTo(cx - 120, bottomY);
+        p3.curveTo(cx - 185, 190, cx - 15, 130, cx + 85, 170);
+        p3.curveTo(cx + 145, 220, cx + 120, 350, cx - 15, bottomY);
         p3.closePath();
-        g2.setPaint(new GradientPaint(cx - 80, 80, new Color(75, 175, 255), cx + 50, bottomY, new Color(20, 110, 220)));
+        g2.setPaint(new GradientPaint(cx - 65, 130, new Color(75, 175, 255), cx + 45, bottomY, new Color(20, 110, 220)));
         g2.fill(p3);
 
         // Layer 4: Front Glossy Swirl
         Path2D.Double p4 = new Path2D.Double();
-        p4.moveTo(cx - 80, bottomY);
-        p4.curveTo(cx - 150, 200, cx + 20, 130, cx + 110, 190);
-        p4.curveTo(cx + 150, 270, cx + 60, 370, cx - 10, bottomY);
+        p4.moveTo(cx - 70, bottomY);
+        p4.curveTo(cx - 125, 250, cx + 20, 190, cx + 90, 230);
+        p4.curveTo(cx + 125, 290, cx + 55, 370, cx - 10, bottomY);
         p4.closePath();
-        g2.setPaint(new GradientPaint(cx - 30, 150, new Color(135, 210, 255), cx + 30, bottomY, new Color(40, 130, 240)));
+        g2.setPaint(new GradientPaint(cx - 25, 190, new Color(135, 210, 255), cx + 25, bottomY, new Color(40, 130, 240)));
         g2.fill(p4);
     }
 
@@ -148,30 +145,24 @@ public class Windows11Demo extends JPanel implements Runnable {
         int titleH = 36;
         int cornerArc = 16;
 
-        // Windows 11 Soft Ambient Drop Shadow
         g2.setColor(new Color(0, 0, 0, 25));
         g2.fill(new RoundRectangle2D.Double(x + 2, y + 6, w, h, cornerArc, cornerArc));
 
-        // Window Frame (Mica Material)
         g2.setColor(new Color(243, 243, 243, 245));
         g2.fill(new RoundRectangle2D.Double(x, y, w, h, cornerArc, cornerArc));
 
-        // Outline border
         g2.setColor(new Color(210, 210, 210));
         g2.setStroke(new BasicStroke(1f));
         g2.draw(new RoundRectangle2D.Double(x, y, w - 1, h - 1, cornerArc, cornerArc));
 
-        // Title Bar Area
         g2.setColor(new Color(248, 248, 248, 220));
         g2.fill(new RoundRectangle2D.Double(x + 1, y + 1, w - 2, titleH, cornerArc, cornerArc));
         g2.fillRect(x + 1, y + titleH - 5, w - 2, 6);
 
-        // Title Text
         g2.setColor(new Color(30, 30, 30));
         g2.setFont(new Font("Segoe UI Variable", Font.PLAIN, 12));
         g2.drawString("Windows 11 - Fluent Desktop Engine", x + 16, y + 22);
 
-        // Client Interior Surface
         int border = 8;
         int clientX = x + border;
         int clientY = y + titleH;
@@ -187,21 +178,17 @@ public class Windows11Demo extends JPanel implements Runnable {
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         g2.drawString("Windows 11 Fluent visual style rendered.", clientX + 16, clientY + 32);
 
-        // Windows 11 Clean Window Control Buttons
         int btnW = 46, btnH = titleH - 2;
         int closeX = x + w - btnW - 4;
 
-        // Close 'X'
         g2.setColor(new Color(80, 80, 80));
         g2.setStroke(new BasicStroke(1.2f));
         g2.drawLine(closeX + 18, y + 13, closeX + 28, y + 23);
         g2.drawLine(closeX + 28, y + 13, closeX + 18, y + 23);
 
-        // Maximize Snap Box
         int maxX = closeX - btnW;
         g2.drawRect(maxX + 18, y + 13, 10, 10);
 
-        // Minimize Line
         int minX = maxX - btnW;
         g2.drawLine(minX + 18, y + 18, minX + 28, y + 18);
     }
@@ -212,7 +199,6 @@ public class Windows11Demo extends JPanel implements Runnable {
         g2.setColor(new Color(0, 0, 0, 30));
         g2.fill(new RoundRectangle2D.Double(x + 2, y + 4, ICON_SIZE, ICON_SIZE, 12, 12));
 
-        // Modern 4-Square Windows 11 Logo
         Color winBlue = new Color(0, 120, 215);
         g2.setColor(winBlue);
         g2.fill(new RoundRectangle2D.Double(x, y, s - 1, s - 1, 4, 4));
@@ -224,15 +210,12 @@ public class Windows11Demo extends JPanel implements Runnable {
     private void drawTaskbar(Graphics2D g2) {
         int y = H - TASKBAR_H;
 
-        // Windows 11 Translucent Light Acrylic Taskbar
         g2.setColor(new Color(243, 243, 243, 235));
         g2.fillRect(0, y, W, TASKBAR_H);
 
-        // Top Border Line
         g2.setColor(new Color(225, 225, 225));
         g2.fillRect(0, y, W, 1);
 
-        // Centered Icons Cluster
         int totalIcons = 8;
         int spacing = 38;
         int clusterW = totalIcons * spacing;
@@ -248,11 +231,9 @@ public class Windows11Demo extends JPanel implements Runnable {
         drawEdgeIcon(g2, startX + spacing * 6, iconY);
         drawStoreIcon(g2, startX + spacing * 7, iconY);
 
-        // Active app indicator pill under File Explorer
         g2.setColor(new Color(0, 103, 192));
         g2.fill(new RoundRectangle2D.Double(startX + spacing * 5 + 4, y + TASKBAR_H - 4, 16, 3, 2, 2));
 
-        // System Tray
         drawSystemTray(g2, y);
     }
 
@@ -321,17 +302,14 @@ public class Windows11Demo extends JPanel implements Runnable {
         g2.setColor(new Color(60, 60, 60));
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
 
-        // Language Pill
         g2.drawString("ENG", trayX, taskbarY + 20);
         g2.drawString("DE", trayX + 2, taskbarY + 32);
 
-        // Network / Volume
         int iconX = trayX + 30;
         g2.setStroke(new BasicStroke(1.2f));
         g2.drawArc(iconX, taskbarY + 16, 12, 12, 45, 90);
         g2.drawArc(iconX + 2, taskbarY + 19, 8, 8, 45, 90);
 
-        // Clock & Date Stack
         String timeStr = LocalTime.now().format(DateTimeFormatter.ofPattern("12:11"));
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("15/10/2021"));
 
@@ -340,7 +318,6 @@ public class Windows11Demo extends JPanel implements Runnable {
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
         g2.drawString(dateStr, trayX + 52, taskbarY + 34);
 
-        // Notification Badge (Far right)
         g2.setColor(new Color(0, 103, 192));
         g2.fillOval(W - 22, taskbarY + 18, 12, 12);
         g2.setColor(Color.WHITE);
