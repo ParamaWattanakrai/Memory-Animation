@@ -1,0 +1,7 @@
+Requirements:
+- drawLine()
+- curveTo()
+- Midpoint Algorithm
+
+Todos:
+- Improve Transition

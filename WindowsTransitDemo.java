@@ -30,12 +30,15 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
 
     public static void main(String[] args) {
         WindowsTransitionDemo m = new WindowsTransitionDemo();
+        m.setPreferredSize(new Dimension(W, H));
+
         JFrame f = new JFrame();
         f.add(m);
         f.setTitle("Windows XP to Windows 7 Transition");
-        f.setSize(W, H);
         f.setResizable(false);
+        f.pack();
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        f.setLocationRelativeTo(null);
         f.setVisible(true);
         (new Thread(m)).start();
     }
