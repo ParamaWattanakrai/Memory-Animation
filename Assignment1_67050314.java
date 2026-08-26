@@ -105,10 +105,10 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         int explosion2X = 298; 
         int explosion2Y = 205; 
 
-        if (totalTime < 5.5) {
+        if (totalTime < 2.5) {
             drawXPScene(buffer, g2, winX, winY, winW, winH);
-        } else if (totalTime >= 5.5 && totalTime < 7.5) {
-            double progress = (totalTime - 5.5) / 2.0;
+        } else if (totalTime >= 2.5 && totalTime < 4.5) {
+            double progress = (totalTime - 2.5) / 2.0;
             double maxDist = Math.hypot(W, H);
             double currentRadius = Math.pow(progress, 2.5) * maxDist;
 
@@ -125,10 +125,10 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             g2.setClip(oldClip);
 
             drawRetroExplosion(g2, explosion1X, explosion1Y, progress);
-        } else if (totalTime >= 7.5 && totalTime < 13.0) {
+        } else if (totalTime >= 4.5 && totalTime < 10.0) {
             drawWin7Scene(buffer, g2);
-        } else if (totalTime >= 13.0 && totalTime < 15.0) {
-            double progress = (totalTime - 13.0) / 2.0;
+        } else if (totalTime >= 10.0 && totalTime < 12.0) {
+            double progress = (totalTime - 10.0) / 2.0;
             double maxDist = Math.hypot(W, H);
             double currentRadius = Math.pow(progress, 2.5) * maxDist;
 
@@ -158,7 +158,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         int s = ICON_SIZE / 2;
         int arc = 12;
 
-        if (totalTime >= 13.0) { 
+        if (totalTime >= 10.0) { 
             g2.setColor(new Color(0, 0, 0, 30));
             g2.fill(new RoundRectangle2D.Double(x + 2, y + 4, ICON_SIZE, ICON_SIZE, 12, 12));
     
@@ -514,8 +514,9 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.fillRect(panelX + 2, panelY + 2, panelW - 4, panelH - 4);
 
         int gameStep;
-        if (totalTime < 5.4) {
-            gameStep = (int)(totalTime * 0.5) % 3;
+        if (totalTime < 2.4) {
+            // Replaced modulo with min() clamp to prevent wrapping back to 0
+            gameStep = Math.min(2, (int)(totalTime * 1.5));
         } else {
             gameStep = 3; 
         }
@@ -760,7 +761,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private void drawWin7Scene(BufferedImage buffer, Graphics2D g2) {
         drawWin7Desktop(buffer, g2);
         
-        if (totalTime >= 8.5) {
+        if (totalTime >= 5.5) {
             drawWin7MinecraftWindow(g2, 70, 40, 460, 380);
         }
         
@@ -970,7 +971,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             new int[]{cy + 170, cy + 190, cy + ch, cy + ch}, 4
         );
 
-        boolean isFlashing = (totalTime >= 11.0) && ((int)(totalTime * 8) % 2 == 0);
+        boolean isFlashing = (totalTime >= 8.0) && ((int)(totalTime * 8) % 2 == 0);
         int crx = cx + cw / 2 - 22;
         int cry = cy + 95;
 
