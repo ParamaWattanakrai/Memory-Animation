@@ -151,102 +151,90 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setColor(Color.BLACK);
         g2.fillRect(0, 0, W, H);
         
+        // Render the faceted Sahur figure
         drawSahur(g2, W / 2, H / 2 - 20);
     }
 
     private void drawSahur(Graphics2D g2, int cx, int cy) {
-        Color baseBrown = new Color(175, 105, 55);
-        Color darkBrown = new Color(115, 60, 20);
-        Color shadowBrown = new Color(75, 35, 15);
-        Color highlight = new Color(210, 140, 80);
-
-        // Legs
-        g2.setStroke(new BasicStroke(14, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g2.setColor(darkBrown);
-        g2.drawLine(cx - 20, cy + 140, cx - 25, cy + 250); // Left leg
-        g2.drawLine(cx + 25, cy + 140, cx + 30, cy + 250); // Right leg
-
-        // Feet
-        g2.setColor(baseBrown);
-        g2.fillOval(cx - 50, cy + 240, 45, 18); // Left foot
-        g2.fillOval(cx + 5, cy + 240, 45, 18);  // Right foot
+        Color cBase = new Color(175, 107, 50);
+        Color cShadow = new Color(110, 50, 10);
+        Color cHighlight = new Color(215, 155, 95);
+        Color cDark = new Color(50, 20, 5);
+        Color cEye = new Color(230, 215, 185);
         
-        // Toes
-        g2.fillOval(cx - 50, cy + 245, 12, 12);
-        g2.fillOval(cx - 35, cy + 247, 10, 10);
-        g2.fillOval(cx + 35, cy + 245, 12, 12);
-        g2.fillOval(cx + 20, cy + 247, 10, 10);
-
-        // Body 
-        g2.setColor(baseBrown);
-        g2.fillRoundRect(cx - 45, cy - 180, 90, 330, 45, 45);
-
-        // Body shading (left edge)
-        g2.setColor(darkBrown);
-        Shape oldClip = g2.getClip();
-        // Use clip() to intersect with the transition circle, rather than overwriting it
-        g2.clip(new RoundRectangle2D.Double(cx - 45, cy - 180, 90, 330, 45, 45));
-        g2.fillOval(cx - 60, cy - 180, 35, 330);
-        g2.setClip(oldClip); // Restore old clip instead of setting to null
+        // --- 1. Bat (Behind left arm) ---
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{-32, -22, -100, -125}, new int[]{65, 60, 210, 220});
+        drawPolyRel(g2, cHighlight, cx, cy, new int[]{-29, -25, -105, -115}, new int[]{65, 63, 210, 215}); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{-135, -105, -115, -145}, new int[]{200, 205, 235, 225}); 
         
-        // Eyes background
-        g2.setColor(new Color(235, 225, 205));
-        g2.fillOval(cx - 42, cy - 135, 36, 46); // Left eye
-        g2.fillOval(cx + 6, cy - 145, 42, 52);  // Right eye
-
-        // Eye outlines
-        g2.setColor(shadowBrown);
-        g2.setStroke(new BasicStroke(3));
-        g2.drawOval(cx - 42, cy - 135, 36, 46);
-        g2.drawOval(cx + 6, cy - 145, 42, 52);
-
-        // Pupils
-        g2.setColor(Color.BLACK);
-        g2.fillOval(cx - 28, cy - 118, 14, 20);
-        g2.fillOval(cx + 16, cy - 128, 16, 22);
+        // --- 2. Left Leg ---
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{-15, -5, -10, -20}, new int[]{90, 90, 175, 175}); 
+        drawPolyRel(g2, cBase, cx, cy, new int[]{-23, -7, -9, -25}, new int[]{170, 172, 185, 183}); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{-22, -12, -18, -30}, new int[]{180, 180, 255, 255}); 
+        drawPolyRel(g2, cBase, cx, cy, new int[]{-55, -10, -15, -60}, new int[]{250, 250, 265, 265}); 
         
-        // Eye highlights
-        g2.setColor(Color.WHITE);
-        g2.fillOval(cx - 24, cy - 114, 5, 7);
-        g2.fillOval(cx + 20, cy - 124, 6, 8);
+        // --- 3. Right Leg ---
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{25, 35, 38, 28}, new int[]{90, 90, 170, 170}); 
+        drawPolyRel(g2, cBase, cx, cy, new int[]{24, 40, 42, 26}, new int[]{167, 169, 182, 180}); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{28, 38, 42, 32}, new int[]{178, 178, 255, 255}); 
+        drawPolyRel(g2, cBase, cx, cy, new int[]{15, 50, 55, 10}, new int[]{250, 250, 265, 265}); 
 
+        // --- 4. Main Body ---
+        drawPolyRel(g2, cBase, cx, cy, 
+            new int[]{-15, 10, 35, 45, 50, 48, 30, -10, -25, -35, -45, -55, -50, -30}, 
+            new int[]{-205, -210, -200, -150, -50, 80, 100, 105, 90, 20, -80, -120, -160, -190});
+            
+        // Body Shadow (Left)
+        drawPolyRel(g2, cShadow, cx, cy, 
+            new int[]{-15, 0, -10, -20, -25, -35, -45, -55, -50, -30},
+            new int[]{-205, -190, -50, 80, 90, 20, -80, -120, -160, -190});
+            
+        // Body Highlight (Right)
+        drawPolyRel(g2, cHighlight, cx, cy, 
+            new int[]{35, 45, 50, 48, 30, 20, 25},
+            new int[]{-200, -150, -50, 80, 100, 30, -100});
+
+        // --- 5. Face Details ---
+        // Left Eye
+        drawPolyRel(g2, cDark, cx, cy, new int[]{-50, -30, -15, -25, -45, -55}, new int[]{-170, -180, -155, -130, -135, -150});
+        drawPolyRel(g2, cEye, cx, cy, new int[]{-45, -32, -20, -28, -42, -50}, new int[]{-165, -172, -155, -138, -140, -150});
+        drawPolyRel(g2, cDark, cx, cy, new int[]{-35, -25, -22, -28, -38}, new int[]{-160, -165, -150, -142, -152});
+        drawPolyRel(g2, Color.WHITE, cx, cy, new int[]{-30, -25, -26, -31}, new int[]{-155, -158, -152, -150}); 
+        
+        // Right Eye
+        drawPolyRel(g2, cDark, cx, cy, new int[]{5, 25, 40, 35, 15, 0}, new int[]{-185, -190, -165, -140, -135, -160});
+        drawPolyRel(g2, cEye, cx, cy, new int[]{10, 25, 35, 30, 15, 5}, new int[]{-180, -185, -165, -145, -140, -160});
+        drawPolyRel(g2, cDark, cx, cy, new int[]{20, 30, 33, 25, 17}, new int[]{-172, -175, -162, -158, -162});
+        drawPolyRel(g2, Color.WHITE, cx, cy, new int[]{23, 27, 26, 22}, new int[]{-168, -170, -165, -163}); 
+        
         // Nose
-        g2.setColor(highlight);
-        int[] nx = {cx - 5, cx + 18, cx + 5};
-        int[] ny = {cy - 115, cy - 105, cy - 65};
-        g2.fillPolygon(nx, ny, 3);
-        g2.setColor(shadowBrown);
-        g2.drawPolygon(nx, ny, 3);
+        drawPolyRel(g2, cHighlight, cx, cy, new int[]{-10, -25, 0}, new int[]{-140, -115, -120}); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{0, -25, 10}, new int[]{-120, -115, -110}); 
         
-        // Mouth
-        g2.setStroke(new BasicStroke(5));
-        g2.drawArc(cx - 10, cy - 80, 45, 35, 190, 110);
+        // Mouth (Smirk)
+        drawPolyRel(g2, cDark, cx, cy, new int[]{-30, -10, 15, 25, 20, 0, -25}, new int[]{-105, -95, -100, -115, -120, -102, -110});
 
-        // Arms
-        g2.setStroke(new BasicStroke(12, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        // --- 6. Arms ---
+        // Left Arm
+        drawPolyRel(g2, cBase, cx, cy, new int[]{-30, -20, -35, -45}, new int[]{-30, -30, 25, 25}); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{-45, -35, -25, -35}, new int[]{25, 25, 60, 60}); 
+        drawPolyRel(g2, cDark, cx, cy, new int[]{-40, -20, -25, -45}, new int[]{55, 55, 70, 70}); 
         
-        // Right arm (viewer's left)
-        g2.setColor(darkBrown);
-        g2.drawLine(cx - 40, cy - 10, cx - 65, cy + 90);
-        
-        // Left arm (viewer's right)
-        g2.drawLine(cx + 40, cy - 10, cx + 55, cy + 90);
-        
-        // Club / Bat
-        g2.setColor(shadowBrown);
-        int[] clubX = {cx - 50, cx - 75, cx - 140, cx - 110};
-        int[] clubY = {cy + 75, cy + 70, cy + 260, cy + 270};
-        g2.fillPolygon(clubX, clubY, 4);
-        
-        // Club highlights
-        g2.setColor(baseBrown);
-        g2.setStroke(new BasicStroke(6, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g2.drawLine(cx - 65, cy + 85, cx - 120, cy + 250);
+        // Right Arm
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{45, 55, 62, 52}, new int[]{-30, -30, 25, 25}); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{52, 62, 55, 45}, new int[]{25, 25, 70, 70}); 
+        drawPolyRel(g2, cBase, cx, cy, new int[]{42, 58, 55, 40}, new int[]{65, 65, 80, 80}); 
+    }
 
-        // Hands
-        g2.setColor(baseBrown);
-        g2.fillOval(cx - 75, cy + 80, 22, 22); // Hand holding club
-        g2.fillOval(cx + 45, cy + 85, 20, 20); // Free hand
+    private void drawPolyRel(Graphics2D g2, Color c, int cx, int cy, int[] x, int[] y) {
+        int[] nx = new int[x.length];
+        int[] ny = new int[y.length];
+        for(int i = 0; i < x.length; i++) {
+            nx[i] = cx + x[i];
+            ny[i] = cy + y[i];
+        }
+        g2.setColor(c);
+        g2.fillPolygon(nx, ny, x.length);
     }
 
     private Point minesweeperExplosionOrigin() {
@@ -917,10 +905,9 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setStroke(new BasicStroke(1f));
 
         Shape oldClip = g2.getClip();
-        // Use clip() here as well to intersect with the transition circle instead of replacing it
         g2.clip(new Rectangle2D.Double(clientX, clientY, clientW, clientH));
         drawMinecraftScene(g2, clientX, clientY, clientW, clientH);
-        g2.setClip(oldClip); // Restore old clip properly
+        g2.setClip(oldClip); 
 
         g2.setColor(new Color(0, 0, 0, 150));
         g2.drawRect(clientX - 1, clientY - 1, clientW + 1, clientH + 1);
