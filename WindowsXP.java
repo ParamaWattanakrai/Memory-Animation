@@ -83,7 +83,7 @@ public class WindowsXPDemo extends JPanel implements Runnable {
 
         drawDesktop(buffer, g2);
         drawWindow(g2, 60, 70, 310, 210);
-        drawMinesweeperWindow(g2, 220, 140, 240, 280);
+        drawMinesweeperWindow(g2, 180, 100, 280, 340);
         drawBouncingIcon(g2, iconX, iconY);
         drawTaskbar(g2);
         
@@ -260,15 +260,12 @@ public class WindowsXPDemo extends JPanel implements Runnable {
     private void drawMinesweeperWindow(Graphics2D g2, int x, int y, int w, int h) {
         int titleH = 30;
 
-        // Shadow
         g2.setColor(new Color(0, 0, 0, 60));
         g2.fill(new RoundRectangle2D.Double(x + 6, y + 6, w, h, 12, 12));
 
-        // Window Background
         g2.setColor(new Color(192, 192, 192));
         g2.fill(new RoundRectangle2D.Double(x, y, w, h, 12, 12));
 
-        // Title Bar
         GradientPaint titleGrad = new GradientPaint(x, y, new Color(0, 88, 225), x, y + titleH, new Color(30, 110, 255));
         g2.setPaint(titleGrad);
         Path2D.Double titleBar = new Path2D.Double();
@@ -289,7 +286,6 @@ public class WindowsXPDemo extends JPanel implements Runnable {
         g2.setFont(new Font("Tahoma", Font.BOLD, 13));
         g2.drawString("Minesweeper", x + 12, y + 20);
 
-        // Window Control Buttons
         int bw = 22, bh = 22, gap = 2;
         int bx = x + w - (bw * 3 + gap * 2) - 6, by = y + 4;
 
@@ -315,14 +311,12 @@ public class WindowsXPDemo extends JPanel implements Runnable {
         g2.drawLine(cx + bw - 7, cy + 7, cx + 7, cy + bh - 7);
         g2.setStroke(new BasicStroke(1f));
 
-        // Border Outline
         g2.setColor(new Color(0, 70, 200));
         bresenhamLine(g2, x, y + 10, x, y + h - 10);
         bresenhamLine(g2, x + w, y + 10, x + w, y + h - 10);
         bresenhamLine(g2, x + 10, y, x + w - 10, y);
         bresenhamLine(g2, x + 10, y + h, x + w - 10, y + h);
 
-        // Minesweeper Header Panel (Sunken)
         int panelX = x + 12;
         int panelY = y + 42;
         int panelW = w - 24;
@@ -335,7 +329,9 @@ public class WindowsXPDemo extends JPanel implements Runnable {
         g2.setColor(new Color(192, 192, 192));
         g2.fillRect(panelX + 1, panelY + 1, panelW - 1, panelH - 1);
 
-        // Score display (LCD style)
+        int gameStep = (int)(totalTime * 0.5) % 4;
+
+        // Score display
         g2.setColor(Color.BLACK);
         g2.fillRect(panelX + 8, panelY + 7, 40, 24);
         g2.setColor(Color.RED);
@@ -358,19 +354,30 @@ public class WindowsXPDemo extends JPanel implements Runnable {
         g2.fillOval(faceX + 3, faceY + 3, 20, 20);
         g2.setColor(Color.BLACK);
         g2.drawOval(faceX + 3, faceY + 3, 20, 20);
-        g2.fillRect(faceX + 8, faceY + 9, 2, 3);
-        g2.fillRect(faceX + 16, faceY + 9, 2, 3);
-        g2.drawArc(faceX + 8, faceY + 11, 10, 8, 0, -180);
+        
+        if (gameStep == 3) {
+            // Dead face (X eyes, frown)
+            g2.drawLine(faceX + 7, faceY + 8, faceX + 11, faceY + 12);
+            g2.drawLine(faceX + 7, faceY + 12, faceX + 11, faceY + 8);
+            g2.drawLine(faceX + 15, faceY + 8, faceX + 19, faceY + 12);
+            g2.drawLine(faceX + 15, faceY + 12, faceX + 19, faceY + 8);
+            g2.drawArc(faceX + 8, faceY + 13, 10, 8, 0, 180);
+        } else {
+            // Happy face
+            g2.fillRect(faceX + 8, faceY + 9, 2, 3);
+            g2.fillRect(faceX + 16, faceY + 9, 2, 3);
+            g2.drawArc(faceX + 8, faceY + 11, 10, 8, 0, -180);
+        }
 
         // Timer display
         g2.setColor(Color.BLACK);
         g2.fillRect(panelX + panelW - 48, panelY + 7, 40, 24);
         g2.setColor(Color.RED);
-        int timeVal = (int)(totalTime * 3) % 999;
+        int timeVal = (gameStep == 3) ? 43 : (int)(totalTime * 3) % 999;
         String timeStr = String.format("%03d", timeVal);
         g2.drawString(timeStr, panelX + panelW - 45, panelY + 25);
 
-        // Minesweeper Grid Area
+        // Minesweeper Grid Area (10 cols x 10 rows)
         int gridX = panelX;
         int gridY = panelY + panelH + 8;
         int gridW = panelW;
@@ -383,50 +390,117 @@ public class WindowsXPDemo extends JPanel implements Runnable {
         g2.setColor(new Color(192, 192, 192));
         g2.fillRect(gridX + 1, gridY + 1, gridW - 1, gridH - 1);
 
-        // Draw Grid Cells & Clearing Animation before hitting bomb
-        int cols = 8;
-        int rows = 8;
+        int cols = 10;
+        int rows = 10;
         int cellW = (gridW - 6) / cols;
         int cellH = (gridH - 6) / rows;
-        
-        // Animation loop progress
-        int totalCells = cols * rows;
-        int clearedCount = (int)(totalTime * 4) % (totalCells + 5); 
-        // If clearedCount >= totalCells, it hit a bomb and resets loop
+
+        // First click revealed patch (Image 1)
+        int[][] patchStep1 = {
+            {2, 0, 1, 1},
+            {2, 1, 1, 2}, {3, 1, 1, 1}, {4, 1, 1, 1}, {5, 1, 1, 1}, {7, 1, 1, 1}, {8, 1, 1, 1},
+            {5, 2, 1, 1}, {7, 2, 1, 1},
+            {0, 3, 1, 1}, {1, 3, 1, 2}, {3, 3, 1, 2}, {4, 3, 1, 1}, {5, 3, 1, 1}, {7, 1, 1, 2}, {7, 3, 1, 2},
+            {1, 4, 1, 1}, {2, 4, 1, 1}, {3, 4, 1, 1}, {7, 4, 1, 2},
+            {5, 5, 1, 1}, {6, 5, 1, 1}, {7, 5, 1, 1}, {8, 5, 1, 2},
+            {0, 6, 1, 2}, {1, 6, 1, 2}, {2, 6, 1, 1}, {4, 6, 1, 1}, {6, 6, 1, 1}, {7, 6, 1, 1}, {8, 6, 1, 1}, {9, 6, 1, 1},
+            {2, 7, 1, 1}, {4, 7, 1, 1}, {5, 7, 1, 1}, {6, 7, 1, 1},
+            {2, 8, 1, 1}
+        };
+
+        // Second click adds the 2 at (4,3) 1-based -> col 3, row 2 (0-based) (Image 2)
+        int[][] patchStep2 = {
+            {3, 2, 1, 2}
+        };
+
+        // Mines location for Step 3 (Game Over)
+        int[][] mines = {
+            {1, 1}, {1, 2}, {2, 3}, {8, 2}, {9, 4}, {9, 5}, {5, 6}, {0, 8}, {1, 8}
+        };
+
+        boolean hitBomb = (gameStep == 3);
 
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
                 int cx2 = gridX + 4 + c * cellW;
                 int cy2 = gridY + 4 + r * cellH;
-                int index = r * cols + c;
 
-                if (index < clearedCount && clearedCount < totalCells) {
-                    // Cleared safe cell
+                boolean isOpen = false;
+                int cellVal = 1;
+
+                if (gameStep >= 1) {
+                    for (int i = 0; i < patchStep1.length; i++) {
+                        if (patchStep1[i][0] == c && patchStep1[i][1] == r) {
+                            isOpen = true;
+                            cellVal = patchStep1[i][3];
+                            break;
+                        }
+                    }
+                }
+                if (gameStep >= 2) {
+                    for (int i = 0; i < patchStep2.length; i++) {
+                        if (patchStep2[i][0] == c && patchStep2[i][1] == r) {
+                            isOpen = true;
+                            cellVal = patchStep2[i][3];
+                            break;
+                        }
+                    }
+                }
+
+                boolean isMine = false;
+                for (int i = 0; i < mines.length; i++) {
+                    if (mines[i][0] == c && mines[i][1] == r) {
+                        isMine = true;
+                        break;
+                    }
+                }
+
+                if (hitBomb && isMine) {
+                    boolean isHitCell = (c == 9 && r == 4);
+                    if (isHitCell) {
+                        g2.setColor(new Color(230, 80, 80));
+                    } else {
+                        g2.setColor(new Color(192, 192, 192));
+                    }
+                    g2.fillRect(cx2, cy2, cellW, cellH);
+                    g2.setColor(Color.BLACK);
+                    g2.drawRect(cx2, cy2, cellW, cellH);
+
+                    int bombCenterX = cx2 + cellW / 2;
+                    int bombCenterY = cy2 + cellH / 2;
+                    int bRadius = Math.min(cellW, cellH) / 2 - 3;
+
+                    g2.setColor(Color.BLACK);
+                    g2.setStroke(new BasicStroke(1.5f));
+                    for (int angle = 0; angle < 360; angle += 45) {
+                        double rad = Math.toRadians(angle);
+                        int sx1 = (int)(bombCenterX + Math.cos(rad) * 2);
+                        int sy1 = (int)(bombCenterY + Math.sin(rad) * 2);
+                        int sx2 = (int)(bombCenterX + Math.cos(rad) * (bRadius + 1));
+                        int sy2 = (int)(bombCenterY + Math.sin(rad) * (bRadius + 1));
+                        g2.drawLine(sx1, sy1, sx2, sy2);
+                    }
+                    g2.setStroke(new BasicStroke(1f));
+
+                    g2.setColor(Color.BLACK);
+                    g2.fillOval(bombCenterX - bRadius + 1, bombCenterY - bRadius + 1, (bRadius - 1) * 2, (bRadius - 1) * 2);
+
+                    g2.setColor(Color.WHITE);
+                    g2.fillOval(bombCenterX - 2, bombCenterY - 2, 2, 2);
+
+                } else if (isOpen) {
                     g2.setColor(new Color(180, 180, 180));
                     g2.fillRect(cx2, cy2, cellW, cellH);
                     g2.setColor(new Color(128, 128, 128));
                     g2.drawRect(cx2, cy2, cellW, cellH);
 
-                    // Draw dummy numbers or blanks
-                    if ((index % 3 == 0) && index > 0) {
-                        g2.setColor(Color.BLUE);
-                        g2.setFont(new Font("Tahoma", Font.BOLD, 11));
-                        g2.drawString("1", cx2 + 5, cy2 + cellH - 4);
-                    } else if (index % 5 == 0 && index > 0) {
-                        g2.setColor(new Color(0, 128, 0));
-                        g2.setFont(new Font("Tahoma", Font.BOLD, 11));
-                        g2.drawString("2", cx2 + 5, cy2 + cellH - 4);
-                    }
-                } else if (clearedCount >= totalCells && index == totalCells - 1) {
-                    // Hit Bomb Animation state
-                    g2.setColor(Color.RED);
-                    g2.fillRect(cx2, cy2, cellW, cellH);
-                    g2.setColor(Color.BLACK);
-                    g2.drawRect(cx2, cy2, cellW, cellH);
-                    // Draw bomb icon/circle
-                    g2.fillOval(cx2 + 3, cy2 + 3, cellW - 6, cellH - 6);
+                    if (cellVal == 1) g2.setColor(Color.BLUE);
+                    else if (cellVal == 2) g2.setColor(new Color(0, 128, 0));
+                    else g2.setColor(Color.RED);
+
+                    g2.setFont(new Font("Tahoma", Font.BOLD, 11));
+                    g2.drawString(String.valueOf(cellVal), cx2 + 4, cy2 + cellH - 4);
                 } else {
-                    // Unopened cell (raised bevel)
                     g2.setColor(new Color(192, 192, 192));
                     g2.fillRect(cx2, cy2, cellW, cellH);
                     
