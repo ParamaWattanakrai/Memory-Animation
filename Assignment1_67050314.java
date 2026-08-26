@@ -760,7 +760,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private void drawWin7Scene(BufferedImage buffer, Graphics2D g2) {
         drawWin7Desktop(buffer, g2);
         
-        if (totalTime >= 7.5) {
+        if (totalTime >= 8.5) {
             drawWin7MinecraftWindow(g2, 70, 40, 460, 380);
         }
         
