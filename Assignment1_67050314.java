@@ -45,9 +45,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         (new Thread(m)).start();
     }
 
-    // ==========================================
-    // CORE ANIMATION & SEQUENCE DIRECTOR
-    // ==========================================
+    // CORE ANIMATION
     @Override
     public void run() {
         double lastTime = System.currentTimeMillis();
@@ -739,7 +737,12 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     // WINDOWS 7
     private void drawWin7Scene(BufferedImage buffer, Graphics2D g2) {
         drawWin7Desktop(buffer, g2);
-        drawWin7MinecraftWindow(g2, 70, 40, 460, 380);
+        
+        // Wait for transition before displaying Minecraft Window
+        if (totalTime >= 7.5) {
+            drawWin7MinecraftWindow(g2, 70, 40, 460, 380);
+        }
+        
         drawBouncingIcon(g2, iconX, iconY);
         drawWin7Taskbar(g2);
     }
@@ -946,7 +949,8 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             new int[]{cy + 170, cy + 190, cy + ch, cy + ch}, 4
         );
 
-        boolean isFlashing = ((int)(totalTime * 8) % 2 == 0);
+        // Flash behavior begins later (at >= 11 seconds) to reduce blink count
+        boolean isFlashing = (totalTime >= 11.0) && ((int)(totalTime * 8) % 2 == 0);
         int crx = cx + cw / 2 - 22;
         int cry = cy + 95;
 
