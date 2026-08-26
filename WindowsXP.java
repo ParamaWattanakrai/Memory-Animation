@@ -1,11 +1,12 @@
 import java.awt.*;
+import java.awt.event.*;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 
-public class WindowsXP extends JPanel implements Runnable {
+public class WindowsXPDemo extends JPanel implements Runnable {
 
     static final int W = 600, H = 600;
     static final int TASKBAR_H = 34;
@@ -14,9 +15,21 @@ public class WindowsXP extends JPanel implements Runnable {
     double iconX = 100, iconY = 100;
     double iconVX = 160, iconVY = 130;
     double totalTime = 0;
+    
+    int mouseX = 0, mouseY = 0;
+
+    public WindowsXPDemo() {
+        addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+        });
+    }
 
     public static void main(String[] args) {
-        WindowsXP m = new WindowsXP();
+        WindowsXPDemo m = new WindowsXPDemo();
         JFrame f = new JFrame();
         f.add(m);
         f.setTitle("Windows XP - My Memories");
@@ -69,15 +82,30 @@ public class WindowsXP extends JPanel implements Runnable {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         drawDesktop(buffer, g2);
-        drawWindow(g2, 140, 90, 340, 220);
+        drawWindow(g2, 60, 70, 310, 210);
+        drawMinesweeperWindow(g2, 220, 140, 240, 280);
         drawBouncingIcon(g2, iconX, iconY);
         drawTaskbar(g2);
+        
+        drawDebugInfo(g2);
 
         g.drawImage(buffer, 0, 0, null);
     }
 
+    private void drawDebugInfo(Graphics2D g2) {
+        g2.setColor(Color.BLACK);
+        g2.fillRect(5, 5, 120, 25);
+        g2.setColor(Color.GREEN);
+        g2.drawRect(5, 5, 120, 25);
+        g2.setFont(new Font("Monospaced", Font.BOLD, 14));
+        g2.drawString("X: " + mouseX + " Y: " + mouseY, 15, 23);
+        
+        g2.setColor(Color.RED);
+        g2.drawLine(mouseX - 10, mouseY, mouseX + 10, mouseY);
+        g2.drawLine(mouseX, mouseY - 10, mouseX, mouseY + 10);
+    }
+
     private void drawDesktop(BufferedImage buffer, Graphics2D g2) {
-        // 8-Color Palette derived from the provided image
         Color cSkyDark = new Color(58, 121, 223);
         Color cSkyMid = new Color(135, 179, 241);
         Color cCloudShadow = new Color(175, 203, 241);
@@ -88,11 +116,9 @@ public class WindowsXP extends JPanel implements Runnable {
         Color cGrassDark = new Color(71, 107, 26);
         Color cGrassDeep = new Color(52, 80, 20);
 
-        // Sky Base
         g2.setColor(cSkyMid);
         g2.fillRect(0, 0, W, H - TASKBAR_H);
 
-        // Sky Dark
         drawPoly(g2, cSkyDark, 
             new int[]{0, 110, 160, 200, 150, 120, 80, 30, 0}, 
             new int[]{0, 0,   30,  80,  120, 140, 130, 90, 70});
@@ -100,7 +126,6 @@ public class WindowsXP extends JPanel implements Runnable {
             new int[]{220, 600, 600, 480, 450, 400, 320, 280, 250}, 
             new int[]{0,   0,   250, 280, 210, 220, 160, 100, 50});
 
-        // Sky Light / Cloud Shadow
         drawPoly(g2, cCloudShadow,
             new int[]{0, 100, 150, 200, 350, 450, 600, 600, 0},
             new int[]{220, 230, 210, 240, 250, 230, 270, 350, 350});
@@ -111,7 +136,6 @@ public class WindowsXP extends JPanel implements Runnable {
             new int[]{70, 180, 280, 340, 260, 120},
             new int[]{160, 140, 170, 200, 190, 180});
 
-        // Cloud
         drawPoly(g2, cCloud,
             new int[]{0, 60, 120, 160, 130, 80, 30, 0},
             new int[]{240, 230, 250, 280, 290, 270, 280, 260});
@@ -128,12 +152,10 @@ public class WindowsXP extends JPanel implements Runnable {
             new int[]{220, 290, 330, 280, 240},
             new int[]{180, 170, 200, 220, 210});
 
-        // Grass Light (Base Hill)
         drawPoly(g2, cGrassLight,
             new int[]{0, 150, 250, 350, 450, 550, 600, 600, 0},
             new int[]{315, 310, 318, 330, 345, 365, 385, 600, 600});
 
-        // Grass Mid
         drawPoly(g2, cGrassMid,
             new int[]{0, 100, 200, 350, 500, 600, 600, 0},
             new int[]{350, 355, 365, 390, 420, 440, 600, 600});
@@ -141,7 +163,6 @@ public class WindowsXP extends JPanel implements Runnable {
             new int[]{200, 300, 400, 500, 600, 600, 450, 300},
             new int[]{325, 335, 360, 380, 410, 440, 400, 350});
 
-        // Grass Dark
         drawPoly(g2, cGrassDark,
             new int[]{0, 150, 300, 450, 600, 600, 0},
             new int[]{420, 430, 450, 480, 500, 600, 600});
@@ -152,7 +173,6 @@ public class WindowsXP extends JPanel implements Runnable {
             new int[]{250, 400, 550, 600, 600, 450, 300},
             new int[]{370, 390, 410, 420, 450, 430, 390});
 
-        // Grass Deep
         drawPoly(g2, cGrassDeep,
             new int[]{0, 180, 350, 500, 600, 600, 0},
             new int[]{490, 505, 520, 540, 550, 600, 600});
@@ -235,6 +255,191 @@ public class WindowsXP extends JPanel implements Runnable {
         g2.setColor(Color.BLACK);
         g2.setFont(new Font("Tahoma", Font.PLAIN, 12));
         g2.drawString("Insert your own memory here...", x + 16, y + titleH + 30);
+    }
+
+    private void drawMinesweeperWindow(Graphics2D g2, int x, int y, int w, int h) {
+        int titleH = 30;
+
+        // Shadow
+        g2.setColor(new Color(0, 0, 0, 60));
+        g2.fill(new RoundRectangle2D.Double(x + 6, y + 6, w, h, 12, 12));
+
+        // Window Background
+        g2.setColor(new Color(192, 192, 192));
+        g2.fill(new RoundRectangle2D.Double(x, y, w, h, 12, 12));
+
+        // Title Bar
+        GradientPaint titleGrad = new GradientPaint(x, y, new Color(0, 88, 225), x, y + titleH, new Color(30, 110, 255));
+        g2.setPaint(titleGrad);
+        Path2D.Double titleBar = new Path2D.Double();
+        titleBar.moveTo(x, y + titleH);
+        titleBar.lineTo(x, y + 10);
+        titleBar.quadTo(x, y, x + 10, y);
+        titleBar.lineTo(x + w - 10, y);
+        titleBar.quadTo(x + w, y, x + w, y + 10);
+        titleBar.lineTo(x + w, y + titleH);
+        titleBar.closePath();
+        g2.fill(titleBar);
+        g2.setPaint(null);
+
+        g2.setColor(new Color(255, 255, 255, 100));
+        g2.draw(new RoundRectangle2D.Double(x + 1, y + 1, w - 2, h - 2, 10, 10));
+
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("Tahoma", Font.BOLD, 13));
+        g2.drawString("Minesweeper", x + 12, y + 20);
+
+        // Window Control Buttons
+        int bw = 22, bh = 22, gap = 2;
+        int bx = x + w - (bw * 3 + gap * 2) - 6, by = y + 4;
+
+        g2.setPaint(new GradientPaint(bx, by, new Color(80, 160, 255), bx, by + bh, new Color(30, 100, 220)));
+        g2.fill(new RoundRectangle2D.Double(bx, by, bw, bh, 4, 4));
+        g2.setColor(Color.WHITE);
+        g2.fillRect(bx + 6, by + bh - 7, bw - 12, 3);
+        
+        g2.setPaint(new GradientPaint(bx + bw + gap, by, new Color(80, 160, 255), bx + bw + gap, by + bh, new Color(30, 100, 220)));
+        g2.fill(new RoundRectangle2D.Double(bx + bw + gap, by, bw, bh, 4, 4));
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(2f));
+        g2.drawRect(bx + bw + gap + 6, by + 6, bw - 12, bh - 12);
+        g2.fillRect(bx + bw + gap + 6, by + 6, bw - 12, 3);
+        g2.setStroke(new BasicStroke(1f));
+
+        int cx = bx + (bw + gap) * 2, cy = by;
+        g2.setPaint(new GradientPaint(cx, cy, new Color(240, 100, 80), cx, cy + bh, new Color(210, 40, 30)));
+        g2.fill(new RoundRectangle2D.Double(cx, cy, bw, bh, 4, 4));
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(2f));
+        g2.drawLine(cx + 7, cy + 7, cx + bw - 7, cy + bh - 7);
+        g2.drawLine(cx + bw - 7, cy + 7, cx + 7, cy + bh - 7);
+        g2.setStroke(new BasicStroke(1f));
+
+        // Border Outline
+        g2.setColor(new Color(0, 70, 200));
+        bresenhamLine(g2, x, y + 10, x, y + h - 10);
+        bresenhamLine(g2, x + w, y + 10, x + w, y + h - 10);
+        bresenhamLine(g2, x + 10, y, x + w - 10, y);
+        bresenhamLine(g2, x + 10, y + h, x + w - 10, y + h);
+
+        // Minesweeper Header Panel (Sunken)
+        int panelX = x + 12;
+        int panelY = y + 42;
+        int panelW = w - 24;
+        int panelH = 38;
+        
+        g2.setColor(new Color(128, 128, 128));
+        g2.drawRect(panelX, panelY, panelW, panelH);
+        g2.setColor(Color.WHITE);
+        g2.drawRect(panelX + 1, panelY + 1, panelW, panelH);
+        g2.setColor(new Color(192, 192, 192));
+        g2.fillRect(panelX + 1, panelY + 1, panelW - 1, panelH - 1);
+
+        // Score display (LCD style)
+        g2.setColor(Color.BLACK);
+        g2.fillRect(panelX + 8, panelY + 7, 40, 24);
+        g2.setColor(Color.RED);
+        g2.setFont(new Font("Monospaced", Font.BOLD, 18));
+        g2.drawString("010", panelX + 11, panelY + 25);
+
+        // Smiley face button
+        int faceX = panelX + panelW / 2 - 13;
+        int faceY = panelY + 6;
+        g2.setColor(new Color(192, 192, 192));
+        g2.fillRect(faceX, faceY, 26, 26);
+        g2.setColor(Color.WHITE);
+        g2.drawLine(faceX, faceY, faceX + 25, faceY);
+        g2.drawLine(faceX, faceY, faceX, faceY + 25);
+        g2.setColor(new Color(128, 128, 128));
+        g2.drawLine(faceX + 25, faceY, faceX + 25, faceY + 25);
+        g2.drawLine(faceX, faceY + 25, faceX + 25, faceY + 25);
+        
+        g2.setColor(Color.YELLOW);
+        g2.fillOval(faceX + 3, faceY + 3, 20, 20);
+        g2.setColor(Color.BLACK);
+        g2.drawOval(faceX + 3, faceY + 3, 20, 20);
+        g2.fillRect(faceX + 8, faceY + 9, 2, 3);
+        g2.fillRect(faceX + 16, faceY + 9, 2, 3);
+        g2.drawArc(faceX + 8, faceY + 11, 10, 8, 0, -180);
+
+        // Timer display
+        g2.setColor(Color.BLACK);
+        g2.fillRect(panelX + panelW - 48, panelY + 7, 40, 24);
+        g2.setColor(Color.RED);
+        int timeVal = (int)(totalTime * 3) % 999;
+        String timeStr = String.format("%03d", timeVal);
+        g2.drawString(timeStr, panelX + panelW - 45, panelY + 25);
+
+        // Minesweeper Grid Area
+        int gridX = panelX;
+        int gridY = panelY + panelH + 8;
+        int gridW = panelW;
+        int gridH = h - (gridY - y) - 12;
+
+        g2.setColor(new Color(128, 128, 128));
+        g2.drawRect(gridX, gridY, gridW, gridH);
+        g2.setColor(Color.WHITE);
+        g2.drawRect(gridX + 1, gridY + 1, gridW, gridH);
+        g2.setColor(new Color(192, 192, 192));
+        g2.fillRect(gridX + 1, gridY + 1, gridW - 1, gridH - 1);
+
+        // Draw Grid Cells & Clearing Animation before hitting bomb
+        int cols = 8;
+        int rows = 8;
+        int cellW = (gridW - 6) / cols;
+        int cellH = (gridH - 6) / rows;
+        
+        // Animation loop progress
+        int totalCells = cols * rows;
+        int clearedCount = (int)(totalTime * 4) % (totalCells + 5); 
+        // If clearedCount >= totalCells, it hit a bomb and resets loop
+
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                int cx2 = gridX + 4 + c * cellW;
+                int cy2 = gridY + 4 + r * cellH;
+                int index = r * cols + c;
+
+                if (index < clearedCount && clearedCount < totalCells) {
+                    // Cleared safe cell
+                    g2.setColor(new Color(180, 180, 180));
+                    g2.fillRect(cx2, cy2, cellW, cellH);
+                    g2.setColor(new Color(128, 128, 128));
+                    g2.drawRect(cx2, cy2, cellW, cellH);
+
+                    // Draw dummy numbers or blanks
+                    if ((index % 3 == 0) && index > 0) {
+                        g2.setColor(Color.BLUE);
+                        g2.setFont(new Font("Tahoma", Font.BOLD, 11));
+                        g2.drawString("1", cx2 + 5, cy2 + cellH - 4);
+                    } else if (index % 5 == 0 && index > 0) {
+                        g2.setColor(new Color(0, 128, 0));
+                        g2.setFont(new Font("Tahoma", Font.BOLD, 11));
+                        g2.drawString("2", cx2 + 5, cy2 + cellH - 4);
+                    }
+                } else if (clearedCount >= totalCells && index == totalCells - 1) {
+                    // Hit Bomb Animation state
+                    g2.setColor(Color.RED);
+                    g2.fillRect(cx2, cy2, cellW, cellH);
+                    g2.setColor(Color.BLACK);
+                    g2.drawRect(cx2, cy2, cellW, cellH);
+                    // Draw bomb icon/circle
+                    g2.fillOval(cx2 + 3, cy2 + 3, cellW - 6, cellH - 6);
+                } else {
+                    // Unopened cell (raised bevel)
+                    g2.setColor(new Color(192, 192, 192));
+                    g2.fillRect(cx2, cy2, cellW, cellH);
+                    
+                    g2.setColor(Color.WHITE);
+                    g2.drawLine(cx2, cy2, cx2 + cellW - 1, cy2);
+                    g2.drawLine(cx2, cy2, cx2, cy2 + cellH - 1);
+                    
+                    g2.setColor(new Color(128, 128, 128));
+                    g2.drawLine(cx2 + cellW - 1, cy2, cx2 + cellW - 1, cy2 + cellH - 1);
+                    g2.drawLine(cx2, cy2 + cellH - 1, cx2 + cellW - 1, cy2 + cellH - 1);
+                }
+            }
+        }
     }
 
     private void drawBouncingIcon(Graphics2D g2, double x, double y) {
