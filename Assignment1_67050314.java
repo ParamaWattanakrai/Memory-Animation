@@ -12,10 +12,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     static final int W = 600, H = 600;
     static final int TASKBAR_H = 34;
     static final int WIN11_TASKBAR_H = 48; 
-    static final int ICON_SIZE = 56;
 
-    double iconX = 100, iconY = 100;
-    double iconVX = 160, iconVY = 130;
     double totalTime = 0;
     
     int mouseX = 0, mouseY = 0;
@@ -54,7 +51,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             lastTime = now;
             totalTime += elapsed;
 
-            updateBounce(elapsed);
             repaint();
 
             try {
@@ -63,19 +59,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
                 System.err.println(e);
             }
         }
-    }
-
-    private void updateBounce(double dt) {
-        iconX += iconVX * dt;
-        iconY += iconVY * dt;
-
-        double minX = 0, maxX = W - ICON_SIZE;
-        double minY = 0, maxY = H - WIN11_TASKBAR_H - ICON_SIZE;
-
-        if (iconX <= minX) { iconX = minX; iconVX = Math.abs(iconVX); }
-        if (iconX >= maxX) { iconX = maxX; iconVX = -Math.abs(iconVX); }
-        if (iconY <= minY) { iconY = minY; iconVY = Math.abs(iconVY); }
-        if (iconY >= maxY) { iconY = maxY; iconVY = -Math.abs(iconVY); }
     }
 
     @Override
@@ -124,9 +107,9 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             g2.setClip(oldClip);
 
             drawRetroExplosion(g2, explosion1X, explosion1Y, progress);
-        } else if (totalTime >= 4.5 && totalTime < 7.5) { // Time adjusted from 10.0 to 7.5
+        } else if (totalTime >= 4.5 && totalTime < 7.5) { 
             drawWin7Scene(buffer, g2);
-        } else if (totalTime >= 7.5 && totalTime < 9.5) { // Time adjusted from 10.0/12.0 to 7.5/9.5
+        } else if (totalTime >= 7.5 && totalTime < 9.5) { 
             double progress = (totalTime - 7.5) / 2.0;
             double maxDist = Math.hypot(W, H);
             double currentRadius = Math.pow(progress, 2.5) * maxDist;
@@ -150,38 +133,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
 
         drawDebugInfo(g2);
         g.drawImage(buffer, 0, 0, null);
-    }
-
-    private void drawBouncingIcon(Graphics2D g2, double x, double y) {
-        int s = ICON_SIZE / 2;
-        int arc = 12;
-
-        if (totalTime >= 7.5) { // Time adjusted from 10.0 to 7.5
-            g2.setColor(new Color(0, 0, 0, 30));
-            g2.fill(new RoundRectangle2D.Double(x + 2, y + 4, ICON_SIZE, ICON_SIZE, 12, 12));
-    
-            Color winBlue = new Color(0, 120, 215);
-            g2.setColor(winBlue);
-            g2.fill(new RoundRectangle2D.Double(x, y, s - 1, s - 1, 4, 4));
-            g2.fill(new RoundRectangle2D.Double(x + s + 1, y, s - 1, s - 1, 4, 4));
-            g2.fill(new RoundRectangle2D.Double(x, y + s + 1, s - 1, s - 1, 4, 4));
-            g2.fill(new RoundRectangle2D.Double(x + s + 1, y + s + 1, s - 1, s - 1, 4, 4));
-        } else { 
-            g2.setColor(new Color(0, 0, 0, 50));
-            g2.fill(new RoundRectangle2D.Double(x + 3, y + 3, ICON_SIZE, ICON_SIZE, arc, arc));
-
-            g2.setPaint(new GradientPaint((float)x, (float)y, new Color(250, 95, 65), (float)x, (float)(y + s), new Color(215, 45, 25)));
-            g2.fill(new RoundRectangle2D.Double(x, y, s, s, arc, arc));
-            g2.setPaint(new GradientPaint((float)(x + s), (float)y, new Color(135, 215, 65), (float)(x + s), (float)(y + s), new Color(75, 165, 35)));
-            g2.fill(new RoundRectangle2D.Double(x + s, y, s, s, arc, arc));
-            g2.setPaint(new GradientPaint((float)x, (float)(y + s), new Color(40, 155, 245), (float)x, (float)(y + ICON_SIZE), new Color(15, 95, 205)));
-            g2.fill(new RoundRectangle2D.Double(x, y + s, s, s, arc, arc));
-            g2.setPaint(new GradientPaint((float)(x + s), (float)(y + s), new Color(255, 210, 45), (float)(x + s), (float)(y + ICON_SIZE), new Color(235, 165, 15)));
-            g2.fill(new RoundRectangle2D.Double(x + s, y + s, s, s, arc, arc));
-
-            g2.setPaint(new GradientPaint((float)x, (float)y, new Color(255, 255, 255, 130), (float)x, (float)(y + ICON_SIZE / 2), new Color(255, 255, 255, 0)));
-            g2.fill(new RoundRectangle2D.Double(x, y, ICON_SIZE, ICON_SIZE / 2.0, arc, arc));
-        }
     }
 
     private void drawRetroExplosion(Graphics2D g2, int cx, int cy, double progress) {
@@ -233,56 +184,17 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
 
     private void drawDebugInfo(Graphics2D g2) {
         g2.setColor(Color.BLACK);
-        g2.fillRect(5, 5, 130, 45); // Increased height to 45 to fit the timer
+        g2.fillRect(5, 5, 130, 45);
         g2.setColor(Color.GREEN);
         g2.drawRect(5, 5, 130, 45);
         g2.setFont(new Font("Monospaced", Font.BOLD, 14));
         g2.drawString("X: " + mouseX + " Y: " + mouseY, 15, 23);
         
-        // Add the formatted animation timer
         g2.drawString(String.format("Time: %.2fs", totalTime), 15, 40);
         
         g2.setColor(Color.RED);
         g2.drawLine(mouseX - 10, mouseY, mouseX + 10, mouseY);
         g2.drawLine(mouseX, mouseY - 10, mouseX, mouseY + 10);
-    }
-
-    private void plot(Graphics g, int x, int y) {
-        g.fillRect(x, y, 1, 1);
-    }
-
-    private void bresenhamLine(Graphics g, int x1, int y1, int x2, int y2) {
-        int dx = Math.abs(x2 - x1), dy = Math.abs(y2 - y1);
-        int sx = (x1 < x2) ? 1 : -1;
-        int sy = (y1 < y2) ? 1 : -1;
-        boolean swap = false;
-        if (dy > dx) {
-            int tmp = dx; dx = dy; dy = tmp;
-            swap = true;
-        }
-        int D = 2 * dy - dx;
-        int x = x1, y = y1;
-        for (int i = 1; i <= dx; i++) {
-            plot(g, x, y);
-            if (D >= 0) {
-                if (swap) x += sx; else y += sy;
-                D -= 2 * dx;
-            }
-            if (swap) y += sy; else x += sx;
-            D += 2 * dy;
-        }
-    }
-
-    private void appendBezier(Path2D.Double path, double x1, double y1, double x2, double y2,
-                               double x3, double y3, double x4, double y4) {
-        for (int i = 1; i <= 100; i++) {
-            double t = i / 100.0;
-            double x = Math.pow(1 - t, 3) * x1 + 3 * t * Math.pow(1 - t, 2) * x2
-                    + 3 * Math.pow(t, 2) * (1 - t) * x3 + Math.pow(t, 3) * x4;
-            double y = Math.pow(1 - t, 3) * y1 + 3 * t * Math.pow(1 - t, 2) * y2
-                    + 3 * Math.pow(t, 2) * (1 - t) * y3 + Math.pow(t, 3) * y4;
-            path.lineTo(x, y);
-        }
     }
 
     private void drawPoly(Graphics2D g2, Color c, int[] x, int[] y) {
@@ -294,7 +206,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         drawXPDesktop(buffer, g2);
         drawWindow(g2, 60, 70, 310, 210);
         drawMinesweeperWindow(g2, winX, winY, winW, winH);
-        drawBouncingIcon(g2, iconX, iconY);
         drawXPTaskbar(g2);
     }
 
@@ -429,10 +340,10 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setStroke(new BasicStroke(1f));
 
         g2.setColor(new Color(0, 70, 200));
-        bresenhamLine(g2, x, y + 10, x, y + h - 10);
-        bresenhamLine(g2, x + w, y + 10, x + w, y + h - 10);
-        bresenhamLine(g2, x + 10, y, x + w - 10, y);
-        bresenhamLine(g2, x + 10, y + h, x + w - 10, y + h);
+        g2.drawLine(x, y + 10, x, y + h - 10);
+        g2.drawLine(x + w, y + 10, x + w, y + h - 10);
+        g2.drawLine(x + 10, y, x + w - 10, y);
+        g2.drawLine(x + 10, y + h, x + w - 10, y + h);
 
         g2.setColor(Color.BLACK);
         g2.setFont(new Font("Tahoma", Font.PLAIN, 12));
@@ -494,10 +405,10 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setStroke(new BasicStroke(1f));
 
         g2.setColor(new Color(0, 70, 200));
-        bresenhamLine(g2, x, y + 10, x, y + h - 10);
-        bresenhamLine(g2, x + w, y + 10, x + w, y + h - 10);
-        bresenhamLine(g2, x + 10, y, x + w - 10, y);
-        bresenhamLine(g2, x + 10, y + h, x + w - 10, y + h);
+        g2.drawLine(x, y + 10, x, y + h - 10);
+        g2.drawLine(x + w, y + 10, x + w, y + h - 10);
+        g2.drawLine(x + 10, y, x + w - 10, y);
+        g2.drawLine(x + 10, y + h, x + w - 10, y + h);
 
         int panelX = x + 12;
         int panelY = y + 42;
@@ -759,11 +670,10 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private void drawWin7Scene(BufferedImage buffer, Graphics2D g2) {
         drawWin7Desktop(buffer, g2);
         
-        if (totalTime >= 4.5) { // Adjusted from 5.5 to 4.5 to spawn window earlier
+        if (totalTime >= 4.5) {
             drawWin7MinecraftWindow(g2, 70, 40, 460, 380);
         }
         
-        drawBouncingIcon(g2, iconX, iconY);
         drawWin7Taskbar(g2);
     }
 
@@ -784,21 +694,21 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setStroke(new BasicStroke(40f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         Path2D.Double ribbon1 = new Path2D.Double();
         ribbon1.moveTo(-50, H - 40);
-        appendBezier(ribbon1, -50, H - 40, W * 0.3, H * 0.35, W * 0.7, H * 0.85, W + 50, H * 0.55);
+        ribbon1.curveTo(W * 0.3, H * 0.35, W * 0.7, H * 0.85, W + 50, H * 0.55);
         g2.setColor(new Color(255, 255, 255, 22));
         g2.draw(ribbon1);
 
         g2.setStroke(new BasicStroke(16f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         Path2D.Double ribbon2 = new Path2D.Double();
         ribbon2.moveTo(-20, H - 20);
-        appendBezier(ribbon2, -20, H - 20, W * 0.4, H * 0.3, W * 0.6, H * 0.8, W + 20, H * 0.5);
+        ribbon2.curveTo(W * 0.4, H * 0.3, W * 0.6, H * 0.8, W + 20, H * 0.5);
         g2.setColor(new Color(255, 255, 255, 45));
         g2.draw(ribbon2);
 
         g2.setStroke(new BasicStroke(3f));
         Path2D.Double ribbon3 = new Path2D.Double();
         ribbon3.moveTo(0, H - 100);
-        appendBezier(ribbon3, 0, H - 100, W * 0.35, H * 0.35, W * 0.65, H * 0.75, W, H * 0.55);
+        ribbon3.curveTo(W * 0.35, H * 0.35, W * 0.65, H * 0.75, W, H * 0.55);
         g2.setColor(new Color(255, 255, 255, 130));
         g2.draw(ribbon3);
 
@@ -969,7 +879,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             new int[]{cy + 170, cy + 190, cy + ch, cy + ch}, 4
         );
 
-        // Timing updated: Creeper starts flashing at 5.5s instead of 8.0s
         boolean isFlashing = (totalTime >= 5.5) && ((int)(totalTime * 8) % 2 == 0); 
         int crx = cx + cw / 2 - 22;
         int cry = cy + 95;
@@ -1122,7 +1031,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
 
     private void drawWin11Scene(BufferedImage buffer, Graphics2D g2) {
         drawWin11Desktop(g2);
-        drawBouncingIcon(g2, iconX, iconY);
         drawWin11Taskbar(g2);
     }
 
