@@ -110,9 +110,9 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         } else if (totalTime >= 5.5 && totalTime < 7.5) {
             double progress = (totalTime - 5.5) / 2.0;
             double maxDist = Math.hypot(W, H);
-            double currentRadius = progress * maxDist;
+            double currentRadius = Math.pow(progress, 2.5) * maxDist;
 
-            drawXPDesktop(buffer, g2);
+            drawXPScene(buffer, g2, winX, winY, winW, winH);
 
             Shape oldClip = g2.getClip();
             Ellipse2D.Double revealCircle = new Ellipse2D.Double(
@@ -130,7 +130,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         } else if (totalTime >= 13.0 && totalTime < 15.0) {
             double progress = (totalTime - 13.0) / 2.0;
             double maxDist = Math.hypot(W, H);
-            double currentRadius = progress * maxDist;
+            double currentRadius = Math.pow(progress, 2.5) * maxDist;
 
             drawWin7Scene(buffer, g2);
 
@@ -187,25 +187,47 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     }
 
     private void drawRetroExplosion(Graphics2D g2, int cx, int cy, double progress) {
-        int maxRadius = (int)(progress * 650);
+        double easeOut = 1.0 - Math.pow(1.0 - progress, 3);
+        int globalAlpha = Math.max(0, Math.min(255, (int)((1.0 - progress) * 255)));
+        if (globalAlpha <= 0) return;
+
+        int ringRadius = (int)(easeOut * 800);
+        g2.setStroke(new BasicStroke((float)((1.0 - progress) * 25f)));
+        g2.setColor(new Color(255, 255, 255, (int)(globalAlpha * 0.4)));
+        g2.drawOval(cx - ringRadius, cy - ringRadius, ringRadius * 2, ringRadius * 2);
         
-        g2.setColor(new Color(255, 255, 0, Math.max(0, 255 - (int)(progress * 255))));
-        g2.fillOval(cx - maxRadius, cy - maxRadius, maxRadius * 2, maxRadius * 2);
+        int coreRadius = (int)(easeOut * 600);
+        if (coreRadius > 0) {
+            RadialGradientPaint blastGrad = new RadialGradientPaint(
+                new Point2D.Float(cx, cy),
+                coreRadius + 1f, 
+                new float[]{0.0f, 0.2f, 0.6f, 1.0f},
+                new Color[]{
+                    new Color(255, 255, 255, globalAlpha),        
+                    new Color(255, 200, 50, globalAlpha),         
+                    new Color(255, 50, 0, (int)(globalAlpha*0.7)),
+                    new Color(50, 0, 0, 0)                        
+                }
+            );
+            g2.setPaint(blastGrad);
+            g2.fillOval(cx - coreRadius, cy - coreRadius, coreRadius * 2, coreRadius * 2);
+        }
 
-        g2.setColor(new Color(255, 100, 0, Math.max(0, 255 - (int)(progress * 300))));
-        g2.fillOval(cx - (int)(maxRadius * 0.7), cy - (int)(maxRadius * 0.7), (int)(maxRadius * 1.4), (int)(maxRadius * 1.4));
-
-        g2.setColor(new Color(255, 255, 255, Math.max(0, 255 - (int)(progress * 400))));
-        g2.fillOval(cx - (int)(maxRadius * 0.3), cy - (int)(maxRadius * 0.3), (int)(maxRadius * 0.6), (int)(maxRadius * 0.6));
-
-        g2.setStroke(new BasicStroke(4f));
-        g2.setColor(Color.YELLOW);
-        for (int angle = 0; angle < 360; angle += 30) {
+        g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        for (int i = 0; i < 24; i++) {
+            double angle = (i * 15) + (i % 2 == 0 ? 0 : 7); 
             double rad = Math.toRadians(angle);
-            int x1 = (int)(cx + Math.cos(rad) * (maxRadius * 0.2));
-            int y1 = (int)(cy + Math.sin(rad) * (maxRadius * 0.2));
-            int x2 = (int)(cx + Math.cos(rad) * maxRadius);
-            int y2 = (int)(cy + Math.sin(rad) * maxRadius);
+            
+            double speedMultiplier = 0.5 + ((i * 7) % 10) / 10.0; 
+            double dist = easeOut * 700 * speedMultiplier;
+            double trailLength = 20 + (1.0 - progress) * 80 * speedMultiplier;
+            
+            int x2 = (int)(cx + Math.cos(rad) * dist);
+            int y2 = (int)(cy + Math.sin(rad) * dist);
+            int x1 = (int)(cx + Math.cos(rad) * Math.max(0, dist - trailLength));
+            int y1 = (int)(cy + Math.sin(rad) * Math.max(0, dist - trailLength));
+
+            g2.setColor(new Color(255, (int)(200 * (1.0 - progress)), 0, globalAlpha));
             g2.drawLine(x1, y1, x2, y2);
         }
         g2.setStroke(new BasicStroke(1f));
@@ -288,7 +310,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         Color cGrassDeep = new Color(52, 80, 20);
 
         g2.setColor(cSkyMid);
-        g2.fillRect(0, 0, W, H - TASKBAR_H);
+        g2.fillRect(0, 0, W, H);
 
         drawPoly(g2, cSkyDark, 
             new int[]{0, 110, 160, 200, 150, 120, 80, 30, 0}, 
@@ -738,7 +760,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private void drawWin7Scene(BufferedImage buffer, Graphics2D g2) {
         drawWin7Desktop(buffer, g2);
         
-        // Wait for transition before displaying Minecraft Window
         if (totalTime >= 7.5) {
             drawWin7MinecraftWindow(g2, 70, 40, 460, 380);
         }
@@ -748,9 +769,9 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     }
 
     private void drawWin7Desktop(BufferedImage buffer, Graphics2D g2) {
-        GradientPaint sky = new GradientPaint(0, 0, new Color(15, 95, 185), 0, H - TASKBAR_H, new Color(5, 45, 105));
+        GradientPaint sky = new GradientPaint(0, 0, new Color(15, 95, 185), 0, H, new Color(5, 45, 105));
         g2.setPaint(sky);
-        g2.fillRect(0, 0, W, H - TASKBAR_H);
+        g2.fillRect(0, 0, W, H);
 
         RadialGradientPaint glow = new RadialGradientPaint(
                 new Point2D.Float(W / 2f, H / 2f - 30),
@@ -759,7 +780,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
                 new Color[]{new Color(55, 175, 245, 160), new Color(0, 0, 0, 0)}
         );
         g2.setPaint(glow);
-        g2.fillRect(0, 0, W, H - TASKBAR_H);
+        g2.fillRect(0, 0, W, H);
 
         g2.setStroke(new BasicStroke(40f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         Path2D.Double ribbon1 = new Path2D.Double();
@@ -949,7 +970,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             new int[]{cy + 170, cy + 190, cy + ch, cy + ch}, 4
         );
 
-        // Flash behavior begins later (at >= 11 seconds) to reduce blink count
         boolean isFlashing = (totalTime >= 11.0) && ((int)(totalTime * 8) % 2 == 0);
         int crx = cx + cw / 2 - 22;
         int cry = cy + 95;
@@ -1110,10 +1130,10 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private void drawWin11Desktop(Graphics2D g2) {
         GradientPaint bg = new GradientPaint(
                 0, 0, new Color(165, 195, 225),
-                W, H - WIN11_TASKBAR_H, new Color(195, 215, 238)
+                W, H, new Color(195, 215, 238)
         );
         g2.setPaint(bg);
-        g2.fillRect(0, 0, W, H - WIN11_TASKBAR_H);
+        g2.fillRect(0, 0, W, H);
 
         RadialGradientPaint centerGlow = new RadialGradientPaint(
                 new Point2D.Float(W * 0.5f, H * 0.4f), 400f,
@@ -1121,7 +1141,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
                 new Color[]{new Color(230, 242, 255, 180), new Color(165, 195, 225, 0)}
         );
         g2.setPaint(centerGlow);
-        g2.fillRect(0, 0, W, H - WIN11_TASKBAR_H);
+        g2.fillRect(0, 0, W, H);
 
         drawBloomPetals(g2);
     }
