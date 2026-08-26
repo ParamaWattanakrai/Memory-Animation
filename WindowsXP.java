@@ -3,11 +3,9 @@ import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedList;
-import java.util.Queue;
 import javax.swing.*;
 
-public class WindowsXPDemo extends JPanel implements Runnable {
+public class WindowsXP extends JPanel implements Runnable {
 
     static final int W = 600, H = 600;
     static final int TASKBAR_H = 34;
@@ -18,7 +16,7 @@ public class WindowsXPDemo extends JPanel implements Runnable {
     double totalTime = 0;
 
     public static void main(String[] args) {
-        WindowsXPDemo m = new WindowsXPDemo();
+        WindowsXP m = new WindowsXP();
         JFrame f = new JFrame();
         f.add(m);
         f.setTitle("Windows XP - My Memories");
@@ -79,77 +77,93 @@ public class WindowsXPDemo extends JPanel implements Runnable {
     }
 
     private void drawDesktop(BufferedImage buffer, Graphics2D g2) {
-        // Deep blue sky fading to light blue at horizon, no clouds
-        GradientPaint sky = new GradientPaint(0, 0, new Color(30, 100, 220), 0, H - TASKBAR_H, new Color(160, 215, 255));
-        g2.setPaint(sky);
+        // 8-Color Palette derived from the provided image
+        Color cSkyDark = new Color(58, 121, 223);
+        Color cSkyMid = new Color(135, 179, 241);
+        Color cCloudShadow = new Color(175, 203, 241);
+        Color cCloud = new Color(233, 239, 246);
+        
+        Color cGrassLight = new Color(135, 186, 46);
+        Color cGrassMid = new Color(102, 152, 36);
+        Color cGrassDark = new Color(71, 107, 26);
+        Color cGrassDeep = new Color(52, 80, 20);
+
+        // Sky Base
+        g2.setColor(cSkyMid);
         g2.fillRect(0, 0, W, H - TASKBAR_H);
-        g2.setPaint(null);
 
-        // Realistic Sun (White core with smooth transparent glowing halo)
-        int sunX = 450;
-        int sunY = 130;
-        
-        for (int r = 70; r > 25; r -= 2) {
-            float alpha = (70f - r) / 45f;
-            g2.setColor(new Color(1f, 1f, 1f, alpha * 0.4f)); 
-            g2.fillOval(sunX - r, sunY - r, r * 2, r * 2);
-        }
-        
-        Color sunCoreColor = Color.WHITE;
-        g2.setColor(sunCoreColor);
-        midpointCircle(g2, sunX, sunY, 25);
-        boundaryFill(buffer, sunX, sunY, sunCoreColor.getRGB(), sunCoreColor.getRGB());
+        // Sky Dark
+        drawPoly(g2, cSkyDark, 
+            new int[]{0, 110, 160, 200, 150, 120, 80, 30, 0}, 
+            new int[]{0, 0,   30,  80,  120, 140, 130, 90, 70});
+        drawPoly(g2, cSkyDark, 
+            new int[]{220, 600, 600, 480, 450, 400, 320, 280, 250}, 
+            new int[]{0,   0,   250, 280, 210, 220, 160, 100, 50});
 
-        // Single Main Hill Silhouette
-        Path2D.Double mainHill = new Path2D.Double();
-        mainHill.moveTo(0, H - TASKBAR_H);
-        mainHill.lineTo(0, 350);
-        appendBezier(mainHill, 0, 350, 200, 320, 450, 430, W, 460);
-        mainHill.lineTo(W, H - TASKBAR_H);
-        mainHill.closePath();
-        
-        g2.setPaint(new GradientPaint(0, 320, new Color(145, 205, 65), 0, H - TASKBAR_H, new Color(110, 175, 50)));
-        g2.fill(mainHill);
+        // Sky Light / Cloud Shadow
+        drawPoly(g2, cCloudShadow,
+            new int[]{0, 100, 150, 200, 350, 450, 600, 600, 0},
+            new int[]{220, 230, 210, 240, 250, 230, 270, 350, 350});
+        drawPoly(g2, cCloudShadow,
+            new int[]{350, 420, 480, 550, 600, 600, 520, 450, 400},
+            new int[]{120, 110, 130, 150, 140, 200, 220, 210, 160});
+        drawPoly(g2, cCloudShadow,
+            new int[]{70, 180, 280, 340, 260, 120},
+            new int[]{160, 140, 170, 200, 190, 180});
 
-        // Clip to restrict shadows strictly to the main hill's surface
-        Shape oldClip = g2.getClip();
-        g2.setClip(mainHill);
+        // Cloud
+        drawPoly(g2, cCloud,
+            new int[]{0, 60, 120, 160, 130, 80, 30, 0},
+            new int[]{240, 230, 250, 280, 290, 270, 280, 260});
+        drawPoly(g2, cCloud,
+            new int[]{420, 480, 540, 600, 600, 560, 490, 450},
+            new int[]{150, 140, 160, 180, 240, 250, 220, 190});
+        drawPoly(g2, cCloud,
+            new int[]{280, 320, 360, 340, 300},
+            new int[]{260, 250, 270, 290, 280});
+        drawPoly(g2, cCloud,
+            new int[]{80, 120, 150, 110, 60},
+            new int[]{40, 30, 50, 70, 60});
+        drawPoly(g2, cCloud,
+            new int[]{220, 290, 330, 280, 240},
+            new int[]{180, 170, 200, 220, 210});
 
-        // Block in shadow 1 (Broad mid-ground sweep)
-        Path2D.Double shadow1 = new Path2D.Double();
-        shadow1.moveTo(-10, 390);
-        appendBezier(shadow1, -10, 390, 250, 400, 450, 480, W + 10, 490);
-        shadow1.lineTo(W + 10, H);
-        shadow1.lineTo(-10, H);
-        shadow1.closePath();
-        g2.setColor(new Color(60, 110, 30, 120));
-        g2.fill(shadow1);
+        // Grass Light (Base Hill)
+        drawPoly(g2, cGrassLight,
+            new int[]{0, 150, 250, 350, 450, 550, 600, 600, 0},
+            new int[]{315, 310, 318, 330, 345, 365, 385, 600, 600});
 
-        // Block in shadow 2 (Deep foreground shadow)
-        Path2D.Double shadow2 = new Path2D.Double();
-        shadow2.moveTo(-10, 450);
-        appendBezier(shadow2, -10, 450, 200, 470, 400, 530, W + 10, 510);
-        shadow2.lineTo(W + 10, H);
-        shadow2.lineTo(-10, H);
-        shadow2.closePath();
-        g2.setColor(new Color(40, 80, 20, 130));
-        g2.fill(shadow2);
+        // Grass Mid
+        drawPoly(g2, cGrassMid,
+            new int[]{0, 100, 200, 350, 500, 600, 600, 0},
+            new int[]{350, 355, 365, 390, 420, 440, 600, 600});
+        drawPoly(g2, cGrassMid,
+            new int[]{200, 300, 400, 500, 600, 600, 450, 300},
+            new int[]{325, 335, 360, 380, 410, 440, 400, 350});
 
-        // Restore original clip
-        g2.setClip(oldClip);
-        g2.setPaint(null);
+        // Grass Dark
+        drawPoly(g2, cGrassDark,
+            new int[]{0, 150, 300, 450, 600, 600, 0},
+            new int[]{420, 430, 450, 480, 500, 600, 600});
+        drawPoly(g2, cGrassDark,
+            new int[]{0, 120, 280, 450, 600, 600, 350, 150},
+            new int[]{380, 395, 420, 440, 460, 510, 470, 430});
+        drawPoly(g2, cGrassDark,
+            new int[]{250, 400, 550, 600, 600, 450, 300},
+            new int[]{370, 390, 410, 420, 450, 430, 390});
+
+        // Grass Deep
+        drawPoly(g2, cGrassDeep,
+            new int[]{0, 180, 350, 500, 600, 600, 0},
+            new int[]{490, 505, 520, 540, 550, 600, 600});
+        drawPoly(g2, cGrassDeep,
+            new int[]{0, 250, 450, 600, 600, 0},
+            new int[]{540, 555, 570, 580, 600, 600});
     }
 
-    private void appendBezier(Path2D.Double path, double x1, double y1, double x2, double y2,
-                               double x3, double y3, double x4, double y4) {
-        for (int i = 1; i <= 100; i++) {
-            double t = i / 100.0;
-            double x = Math.pow(1 - t, 3) * x1 + 3 * t * Math.pow(1 - t, 2) * x2
-                    + 3 * Math.pow(t, 2) * (1 - t) * x3 + Math.pow(t, 3) * x4;
-            double y = Math.pow(1 - t, 3) * y1 + 3 * t * Math.pow(1 - t, 2) * y2
-                    + 3 * Math.pow(t, 2) * (1 - t) * y3 + Math.pow(t, 3) * y4;
-            path.lineTo(x, y);
-        }
+    private void drawPoly(Graphics2D g2, Color c, int[] x, int[] y) {
+        g2.setColor(c);
+        g2.fillPolygon(x, y, x.length);
     }
 
     private void drawWindow(Graphics2D g2, int x, int y, int w, int h) {
@@ -316,48 +330,6 @@ public class WindowsXPDemo extends JPanel implements Runnable {
             }
             if (swap) y += sy; else x += sx;
             D += 2 * dy;
-        }
-    }
-
-    private void midpointCircle(Graphics g, int xc, int yc, int r) {
-        int x = 0, y = r, Dx = 0, Dy = 2 * r, D = 1 - r;
-        while (x <= y) {
-            plot(g, xc + x, yc + y);
-            plot(g, xc - x, yc + y);
-            plot(g, xc + x, yc - y);
-            plot(g, xc - x, yc - y);
-            plot(g, xc + y, yc + x);
-            plot(g, xc - y, yc + x);
-            plot(g, xc + y, yc - x);
-            plot(g, xc - y, yc - x);
-            x++;
-            Dx += 2;
-            D += Dx + 1;
-            if (D >= 0) {
-                y--;
-                Dy -= 2;
-                D -= Dy;
-            }
-        }
-    }
-
-    private void boundaryFill(BufferedImage img, int x, int y, int boundaryColor, int fillColor) {
-        if (img.getRGB(x, y) == fillColor || img.getRGB(x, y) == boundaryColor) return;
-        Queue<Point> q = new LinkedList<>();
-        q.add(new Point(x, y));
-        
-        while (!q.isEmpty()) {
-            Point p = q.poll();
-            if (p.x < 0 || p.x >= img.getWidth() || p.y < 0 || p.y >= img.getHeight()) continue;
-            
-            int current = img.getRGB(p.x, p.y);
-            if (current != boundaryColor && current != fillColor) {
-                img.setRGB(p.x, p.y, fillColor);
-                q.add(new Point(p.x + 1, p.y));
-                q.add(new Point(p.x - 1, p.y));
-                q.add(new Point(p.x, p.y + 1));
-                q.add(new Point(p.x, p.y - 1));
-            }
         }
     }
 }
