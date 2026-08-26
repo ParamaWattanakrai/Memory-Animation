@@ -135,7 +135,7 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
 
     private void drawWin7Scene(BufferedImage buffer, Graphics2D g2) {
         drawWin7Desktop(buffer, g2);
-        drawWin7Window(g2, 130, 80, 340, 220);
+        // drawWin7Window(g2, 130, 80, 340, 220);
         drawBouncingIcon(g2, iconX, iconY);
         drawWin7Taskbar(g2);
     }
@@ -293,20 +293,56 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
     }
 
     private void drawWin7CenterLogo(Graphics2D g2, int cx, int cy) {
-        int s = 22;
-        int off = 4;
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-        g2.setPaint(new GradientPaint(cx - s - off, cy - s - off, new Color(245, 95, 45, 180), cx - off, cy - off, new Color(215, 55, 25, 180)));
-        g2.fill(new RoundRectangle2D.Double(cx - s - off, cy - s - off, s, s, 6, 6));
+        // 1. Top-Left Pane (Red / Orange)
+        Path2D.Double redPane = new Path2D.Double();
+        redPane.moveTo(cx - 130, cy - 65);
+        redPane.curveTo(cx - 90, cy - 120, cx - 45, cy - 110, cx - 4, cy - 75); // Top wave
+        redPane.lineTo(cx - 4, cy - 10);                                       // Center vertical seam
+        redPane.curveTo(cx - 45, cy - 42, cx - 90, cy - 52, cx - 130, cy + 5);   // Middle wave
+        redPane.closePath();
 
-        g2.setPaint(new GradientPaint(cx + off, cy - s - off, new Color(145, 215, 55, 180), cx + s + off, cy - off, new Color(85, 175, 35, 180)));
-        g2.fill(new RoundRectangle2D.Double(cx + off, cy - s - off, s, s, 6, 6));
+        g2.setPaint(new GradientPaint(cx - 130, cy - 120, new Color(245, 95, 40, 225), 
+                                    cx - 4, cy - 10, new Color(210, 45, 25, 225)));
+        g2.fill(redPane);
 
-        g2.setPaint(new GradientPaint(cx - s - off, cy + off, new Color(35, 165, 245, 180), cx - off, cy + s + off, new Color(15, 105, 205, 180)));
-        g2.fill(new RoundRectangle2D.Double(cx - s - off, cy + off, s, s, 6, 6));
+        // 2. Top-Right Pane (Green)
+        Path2D.Double greenPane = new Path2D.Double();
+        greenPane.moveTo(cx + 4, cy - 71);
+        greenPane.curveTo(cx + 45, cy - 35, cx + 90, cy - 45, cx + 130, cy - 90); // Top wave
+        greenPane.lineTo(cx + 130, cy - 23);                                      // Right outer edge
+        greenPane.curveTo(cx + 90, cy + 22, cx + 45, cy + 32, cx + 4, cy - 4);     // Middle wave
+        greenPane.closePath();
 
-        g2.setPaint(new GradientPaint(cx + off, cy + off, new Color(255, 205, 35, 180), cx + s + off, cy + s + off, new Color(225, 155, 15, 180)));
-        g2.fill(new RoundRectangle2D.Double(cx + off, cy + off, s, s, 6, 6));
+        g2.setPaint(new GradientPaint(cx + 4, cy - 71, new Color(145, 215, 50, 225), 
+                                    cx + 130, cy - 23, new Color(75, 175, 30, 225)));
+        g2.fill(greenPane);
+
+        // 3. Bottom-Left Pane (Blue)
+        Path2D.Double bluePane = new Path2D.Double();
+        bluePane.moveTo(cx - 130, cy + 13);
+        bluePane.curveTo(cx - 90, cy - 44, cx - 45, cy - 34, cx - 4, cy - 2);   // Middle wave
+        bluePane.lineTo(cx - 4, cy + 63);                                      // Center vertical seam
+        bluePane.curveTo(cx - 45, cy + 31, cx - 90, cy + 21, cx - 130, cy + 78); // Bottom wave
+        bluePane.closePath();
+
+        g2.setPaint(new GradientPaint(cx - 130, cy - 34, new Color(35, 170, 245, 225), 
+                                    cx - 4, cy + 63, new Color(15, 100, 210, 225)));
+        g2.fill(bluePane);
+
+        // 4. Bottom-Right Pane (Yellow / Gold)
+        Path2D.Double yellowPane = new Path2D.Double();
+        yellowPane.moveTo(cx + 4, cy + 4);
+        yellowPane.curveTo(cx + 45, cy + 40, cx + 90, cy + 30, cx + 130, cy - 15); // Middle wave
+        yellowPane.lineTo(cx + 130, cy + 50);                                      // Right outer edge
+        yellowPane.curveTo(cx + 90, cy + 95, cx + 45, cy + 105, cx + 4, cy + 69); // Bottom wave
+        yellowPane.closePath();
+
+        g2.setPaint(new GradientPaint(cx + 4, cy + 4, new Color(255, 205, 30, 225), 
+                                    cx + 130, cy + 50, new Color(225, 150, 10, 225)));
+        g2.fill(yellowPane);
     }
 
     private void appendBezier(Path2D.Double path, double x1, double y1, double x2, double y2,
