@@ -7,14 +7,55 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 
+/**
+ * Animates a "Windows XP -> Windows 7 -> Windows 11" desktop transition sequence,
+ * complete with a Minesweeper easter egg and a retro-explosion wipe effect between eras.
+ *
+ * Structure of this file:
+ *  1) App bootstrap (main / animation loop)
+ *  2) Scene dispatch (paintComponent + transition effect)
+ *  3) Windows XP scene
+ *  4) Windows 7 scene
+ *  5) Windows 11 scene
+ *  6) Shared window-chrome helpers + debug overlay
+ */
 public class Assignment1_67050314 extends JPanel implements Runnable {
 
+    // ---- Canvas ----
     static final int W = 600, H = 600;
     static final int TASKBAR_H = 34;
-    static final int WIN11_TASKBAR_H = 48; 
+    static final int WIN11_TASKBAR_H = 48;
+    private static final int TARGET_FPS = 60;
+
+    // ---- Animation timeline (seconds since start) ----
+    // [0, XP_END)                       -> Windows XP desktop
+    // [XP_END, WIN7_START)              -> XP -> Win7 explosion transition
+    // [WIN7_START, WIN7_TO_WIN11_START) -> Windows 7 desktop
+    // [WIN7_TO_WIN11_START, WIN11_START)-> Win7 -> Win11 explosion transition
+    // [WIN11_START, ...)                -> Windows 11 desktop
+    private static final double XP_END = 2.5;
+    private static final double TRANSITION_DURATION = 2.0;
+    private static final double WIN7_START = XP_END + TRANSITION_DURATION;
+    private static final double WIN7_TO_WIN11_START = 7.5;
+    private static final double WIN11_START = WIN7_TO_WIN11_START + TRANSITION_DURATION;
+
+    // Time (relative to WIN7_START) at which the Minecraft window appears in the Win7 scene.
+    private static final double MINECRAFT_WINDOW_APPEAR_AT = WIN7_START;
+
+    // ---- Shared window chrome ----
+    private static final int TITLE_BAR_H = 30;
+
+    // ---- Fixed window placements ----
+    private static final Rectangle MEMORIES_WINDOW = new Rectangle(60, 70, 310, 210);
+    private static final Rectangle MINESWEEPER_WINDOW = new Rectangle(170, 80, 280, 340);
+    private static final Rectangle MINECRAFT_WINDOW = new Rectangle(70, 40, 460, 380);
+
+    // Screen-space point the second (Win7 -> Win11) explosion originates from.
+    private static final int TRANSITION_2_X = 298;
+    private static final int TRANSITION_2_Y = 205;
 
     double totalTime = 0;
-    
+
     int mouseX = 0, mouseY = 0;
 
     public Assignment1_67050314() {
@@ -44,19 +85,18 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
 
     @Override
     public void run() {
-        double lastTime = System.currentTimeMillis();
-        while (true) {
-            double now = System.currentTimeMillis();
-            double elapsed = (now - lastTime) / 1000.0;
-            lastTime = now;
-            totalTime += elapsed;
+        long lastTimeMs = System.currentTimeMillis();
+        while (!Thread.currentThread().isInterrupted()) {
+            long nowMs = System.currentTimeMillis();
+            totalTime += (nowMs - lastTimeMs) / 1000.0;
+            lastTimeMs = nowMs;
 
             repaint();
 
             try {
-                Thread.sleep(1000 / 60);
+                Thread.sleep(1000 / TARGET_FPS);
             } catch (InterruptedException e) {
-                System.err.println(e);
+                Thread.currentThread().interrupt();
             }
         }
     }
@@ -69,70 +109,64 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         Graphics2D g2 = buffer.createGraphics();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        int winX = 170, winY = 80, winW = 280, winH = 340;
-        int panelX = winX + 12;
-        int panelY = winY + 42;
-        int panelW = winW - 24;
-        int panelH = 38;
-        int gridX = panelX;
-        int gridY = panelY + panelH + 8;
-        int gridW = panelW;
-        int gridH = winH - (gridY - winY) - 12;
-        int cellW = (gridW - 6) / 9;
-        int cellH = (gridH - 6) / 9;
-        
-        int explosion1X = gridX + 4 + 8 * cellW + cellW / 2;
-        int explosion1Y = gridY + 4 + 4 * cellH + cellH / 2;
-        
-        int explosion2X = 298; 
-        int explosion2Y = 205; 
-
-        if (totalTime < 2.5) {
-            drawXPScene(buffer, g2, winX, winY, winW, winH);
-        } else if (totalTime >= 2.5 && totalTime < 4.5) {
-            double progress = (totalTime - 2.5) / 2.0;
-            double maxDist = Math.hypot(W, H);
-            double currentRadius = Math.pow(progress, 2.5) * maxDist;
-
-            drawXPScene(buffer, g2, winX, winY, winW, winH);
-
-            Shape oldClip = g2.getClip();
-            Ellipse2D.Double revealCircle = new Ellipse2D.Double(
-                explosion1X - currentRadius, explosion1Y - currentRadius,
-                currentRadius * 2, currentRadius * 2
-            );
-            g2.setClip(revealCircle);
-
-            drawWin7Scene(buffer, g2);
-            g2.setClip(oldClip);
-
-            drawRetroExplosion(g2, explosion1X, explosion1Y, progress);
-        } else if (totalTime >= 4.5 && totalTime < 7.5) { 
-            drawWin7Scene(buffer, g2);
-        } else if (totalTime >= 7.5 && totalTime < 9.5) { 
-            double progress = (totalTime - 7.5) / 2.0;
-            double maxDist = Math.hypot(W, H);
-            double currentRadius = Math.pow(progress, 2.5) * maxDist;
-
-            drawWin7Scene(buffer, g2);
-
-            Shape oldClip = g2.getClip();
-            Ellipse2D.Double revealCircle = new Ellipse2D.Double(
-                explosion2X - currentRadius, explosion2Y - currentRadius,
-                currentRadius * 2, currentRadius * 2
-            );
-            g2.setClip(revealCircle);
-
-            drawWin11Scene(buffer, g2);
-            g2.setClip(oldClip);
-
-            drawRetroExplosion(g2, explosion2X, explosion2Y, progress);
+        if (totalTime < XP_END) {
+            drawXPScene(g2);
+        } else if (totalTime < WIN7_START) {
+            Point origin = minesweeperExplosionOrigin();
+            drawTransition(g2, XP_END, origin.x, origin.y, () -> drawXPScene(g2), () -> drawWin7Scene(g2));
+        } else if (totalTime < WIN7_TO_WIN11_START) {
+            drawWin7Scene(g2);
+        } else if (totalTime < WIN11_START) {
+            drawTransition(g2, WIN7_TO_WIN11_START, TRANSITION_2_X, TRANSITION_2_Y,
+                    () -> drawWin7Scene(g2), () -> drawWin11Scene(g2));
         } else {
-            drawWin11Scene(buffer, g2);
+            drawWin11Scene(g2);
         }
 
         drawDebugInfo(g2);
         g.drawImage(buffer, 0, 0, null);
+    }
+
+    /**
+     * Renders a circular "explosion wipe" transition from one scene to another: the old scene
+     * is drawn, an expanding circular reveal clips in the new scene, and a retro explosion
+     * effect plays over the seam.
+     *
+     * @param phaseStart   the totalTime value at which this transition begins
+     * @param originX      x of the point the wipe expands from
+     * @param originY      y of the point the wipe expands from
+     * @param drawOldScene renders the scene being transitioned away from
+     * @param drawNewScene renders the scene being transitioned into
+     */
+    private void drawTransition(Graphics2D g2, double phaseStart, int originX, int originY,
+                                 Runnable drawOldScene, Runnable drawNewScene) {
+        double progress = (totalTime - phaseStart) / TRANSITION_DURATION;
+        double maxDist = Math.hypot(W, H);
+        double radius = Math.pow(progress, 2.5) * maxDist;
+
+        drawOldScene.run();
+
+        Shape oldClip = g2.getClip();
+        g2.setClip(new Ellipse2D.Double(originX - radius, originY - radius, radius * 2, radius * 2));
+        drawNewScene.run();
+        g2.setClip(oldClip);
+
+        drawRetroExplosion(g2, originX, originY, progress);
+    }
+
+    /** Screen point at the center of the Minesweeper grid's mine hit, used as the first explosion origin. */
+    private Point minesweeperExplosionOrigin() {
+        int panelX = MINESWEEPER_WINDOW.x + 12;
+        int panelY = MINESWEEPER_WINDOW.y + 42;
+        int panelW = MINESWEEPER_WINDOW.width - 24;
+        int panelH = 38;
+        int gridX = panelX;
+        int gridY = panelY + panelH + 8;
+        int gridH = MINESWEEPER_WINDOW.height - (gridY - MINESWEEPER_WINDOW.y) - 12;
+        int cellW = (panelW - 6) / 9;
+        int cellH = (gridH - 6) / 9;
+
+        return new Point(gridX + 4 + 8 * cellW + cellW / 2, gridY + 4 + 4 * cellH + cellH / 2);
     }
 
     private void drawRetroExplosion(Graphics2D g2, int cx, int cy, double progress) {
@@ -202,14 +236,15 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.fillPolygon(x, y, x.length);
     }
 
-    private void drawXPScene(BufferedImage buffer, Graphics2D g2, int winX, int winY, int winW, int winH) {
-        drawXPDesktop(buffer, g2);
-        drawWindow(g2, 60, 70, 310, 210);
-        drawMinesweeperWindow(g2, winX, winY, winW, winH);
+    private void drawXPScene(Graphics2D g2) {
+        drawXPDesktop(g2);
+        drawWindow(g2, MEMORIES_WINDOW.x, MEMORIES_WINDOW.y, MEMORIES_WINDOW.width, MEMORIES_WINDOW.height);
+        drawMinesweeperWindow(g2, MINESWEEPER_WINDOW.x, MINESWEEPER_WINDOW.y,
+                MINESWEEPER_WINDOW.width, MINESWEEPER_WINDOW.height);
         drawXPTaskbar(g2);
     }
 
-    private void drawXPDesktop(BufferedImage buffer, Graphics2D g2) {
+    private void drawXPDesktop(Graphics2D g2) {
         Color cSkyDark = new Color(58, 121, 223);
         Color cSkyMid = new Color(135, 179, 241);
         Color cCloudShadow = new Color(175, 203, 241);
@@ -285,24 +320,26 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             new int[]{540, 555, 570, 580, 600, 600});
     }
 
-    private void drawWindow(Graphics2D g2, int x, int y, int w, int h) {
-        int titleH = 30;
-
+    /**
+     * Shared XP-style window chrome: drop shadow, body fill, gradient title bar with
+     * min/max/close buttons, inner highlight, and outer accent border.
+     */
+    private void drawXPWindowChrome(Graphics2D g2, int x, int y, int w, int h, Color bodyColor, String title) {
         g2.setColor(new Color(0, 0, 0, 60));
         g2.fill(new RoundRectangle2D.Double(x + 6, y + 6, w, h, 12, 12));
 
-        g2.setColor(new Color(240, 240, 235));
+        g2.setColor(bodyColor);
         g2.fill(new RoundRectangle2D.Double(x, y, w, h, 12, 12));
 
-        GradientPaint titleGrad = new GradientPaint(x, y, new Color(0, 88, 225), x, y + titleH, new Color(30, 110, 255));
+        GradientPaint titleGrad = new GradientPaint(x, y, new Color(0, 88, 225), x, y + TITLE_BAR_H, new Color(30, 110, 255));
         g2.setPaint(titleGrad);
         Path2D.Double titleBar = new Path2D.Double();
-        titleBar.moveTo(x, y + titleH);
+        titleBar.moveTo(x, y + TITLE_BAR_H);
         titleBar.lineTo(x, y + 10);
         titleBar.quadTo(x, y, x + 10, y);
         titleBar.lineTo(x + w - 10, y);
         titleBar.quadTo(x + w, y, x + w, y + 10);
-        titleBar.lineTo(x + w, y + titleH);
+        titleBar.lineTo(x + w, y + TITLE_BAR_H);
         titleBar.closePath();
         g2.fill(titleBar);
         g2.setPaint(null);
@@ -312,8 +349,19 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
 
         g2.setColor(Color.WHITE);
         g2.setFont(new Font("Tahoma", Font.BOLD, 13));
-        g2.drawString("My Memories.exe", x + 12, y + 20);
+        g2.drawString(title, x + 12, y + 20);
 
+        drawWindowControlButtons(g2, x, y, w);
+
+        g2.setColor(new Color(0, 70, 200));
+        g2.drawLine(x, y + 10, x, y + h - 10);
+        g2.drawLine(x + w, y + 10, x + w, y + h - 10);
+        g2.drawLine(x + 10, y, x + w - 10, y);
+        g2.drawLine(x + 10, y + h, x + w - 10, y + h);
+    }
+
+    /** The minimize / maximize / close button cluster in the top-right of an XP-style window. */
+    private void drawWindowControlButtons(Graphics2D g2, int x, int y, int w) {
         int bw = 22, bh = 22, gap = 2;
         int bx = x + w - (bw * 3 + gap * 2) - 6, by = y + 4;
 
@@ -322,15 +370,16 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setColor(Color.WHITE);
         g2.fillRect(bx + 6, by + bh - 7, bw - 12, 3);
 
-        g2.setPaint(new GradientPaint(bx + bw + gap, by, new Color(80, 160, 255), bx + bw + gap, by + bh, new Color(30, 100, 220)));
-        g2.fill(new RoundRectangle2D.Double(bx + bw + gap, by, bw, bh, 4, 4));
+        int mx = bx + bw + gap;
+        g2.setPaint(new GradientPaint(mx, by, new Color(80, 160, 255), mx, by + bh, new Color(30, 100, 220)));
+        g2.fill(new RoundRectangle2D.Double(mx, by, bw, bh, 4, 4));
         g2.setColor(Color.WHITE);
         g2.setStroke(new BasicStroke(2f));
-        g2.drawRect(bx + bw + gap + 6, by + 6, bw - 12, bh - 12);
-        g2.fillRect(bx + bw + gap + 6, by + 6, bw - 12, 3);
+        g2.drawRect(mx + 6, by + 6, bw - 12, bh - 12);
+        g2.fillRect(mx + 6, by + 6, bw - 12, 3);
         g2.setStroke(new BasicStroke(1f));
 
-        int cx = bx + (bw + gap) * 2, cy = by;
+        int cx = mx + bw + gap, cy = by;
         g2.setPaint(new GradientPaint(cx, cy, new Color(240, 100, 80), cx, cy + bh, new Color(210, 40, 30)));
         g2.fill(new RoundRectangle2D.Double(cx, cy, bw, bh, 4, 4));
         g2.setColor(Color.WHITE);
@@ -338,77 +387,18 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.drawLine(cx + 7, cy + 7, cx + bw - 7, cy + bh - 7);
         g2.drawLine(cx + bw - 7, cy + 7, cx + 7, cy + bh - 7);
         g2.setStroke(new BasicStroke(1f));
+    }
 
-        g2.setColor(new Color(0, 70, 200));
-        g2.drawLine(x, y + 10, x, y + h - 10);
-        g2.drawLine(x + w, y + 10, x + w, y + h - 10);
-        g2.drawLine(x + 10, y, x + w - 10, y);
-        g2.drawLine(x + 10, y + h, x + w - 10, y + h);
+    private void drawWindow(Graphics2D g2, int x, int y, int w, int h) {
+        drawXPWindowChrome(g2, x, y, w, h, new Color(240, 240, 235), "My Memories.exe");
 
         g2.setColor(Color.BLACK);
         g2.setFont(new Font("Tahoma", Font.PLAIN, 12));
-        g2.drawString("Insert your own memory here...", x + 16, y + titleH + 30);
+        g2.drawString("Insert your own memory here...", x + 16, y + TITLE_BAR_H + 30);
     }
 
     private void drawMinesweeperWindow(Graphics2D g2, int x, int y, int w, int h) {
-        int titleH = 30;
-
-        g2.setColor(new Color(0, 0, 0, 60));
-        g2.fill(new RoundRectangle2D.Double(x + 6, y + 6, w, h, 12, 12));
-
-        g2.setColor(new Color(192, 192, 192));
-        g2.fill(new RoundRectangle2D.Double(x, y, w, h, 12, 12));
-
-        GradientPaint titleGrad = new GradientPaint(x, y, new Color(0, 88, 225), x, y + titleH, new Color(30, 110, 255));
-        g2.setPaint(titleGrad);
-        Path2D.Double titleBar = new Path2D.Double();
-        titleBar.moveTo(x, y + titleH);
-        titleBar.lineTo(x, y + 10);
-        titleBar.quadTo(x, y, x + 10, y);
-        titleBar.lineTo(x + w - 10, y);
-        titleBar.quadTo(x + w, y, x + w, y + 10);
-        titleBar.lineTo(x + w, y + titleH);
-        titleBar.closePath();
-        g2.fill(titleBar);
-        g2.setPaint(null);
-
-        g2.setColor(new Color(255, 255, 255, 100));
-        g2.draw(new RoundRectangle2D.Double(x + 1, y + 1, w - 2, h - 2, 10, 10));
-
-        g2.setColor(Color.WHITE);
-        g2.setFont(new Font("Tahoma", Font.BOLD, 13));
-        g2.drawString("Minesweeper", x + 12, y + 20);
-
-        int bw = 22, bh = 22, gap = 2;
-        int bx = x + w - (bw * 3 + gap * 2) - 6, by = y + 4;
-
-        g2.setPaint(new GradientPaint(bx, by, new Color(80, 160, 255), bx, by + bh, new Color(30, 100, 220)));
-        g2.fill(new RoundRectangle2D.Double(bx, by, bw, bh, 4, 4));
-        g2.setColor(Color.WHITE);
-        g2.fillRect(bx + 6, by + bh - 7, bw - 12, 3);
-        
-        g2.setPaint(new GradientPaint(bx + bw + gap, by, new Color(80, 160, 255), bx + bw + gap, by + bh, new Color(30, 100, 220)));
-        g2.fill(new RoundRectangle2D.Double(bx + bw + gap, by, bw, bh, 4, 4));
-        g2.setColor(Color.WHITE);
-        g2.setStroke(new BasicStroke(2f));
-        g2.drawRect(bx + bw + gap + 6, by + 6, bw - 12, bh - 12);
-        g2.fillRect(bx + bw + gap + 6, by + 6, bw - 12, 3);
-        g2.setStroke(new BasicStroke(1f));
-
-        int cx = bx + (bw + gap) * 2, cy = by;
-        g2.setPaint(new GradientPaint(cx, cy, new Color(240, 100, 80), cx, cy + bh, new Color(210, 40, 30)));
-        g2.fill(new RoundRectangle2D.Double(cx, cy, bw, bh, 4, 4));
-        g2.setColor(Color.WHITE);
-        g2.setStroke(new BasicStroke(2f));
-        g2.drawLine(cx + 7, cy + 7, cx + bw - 7, cy + bh - 7);
-        g2.drawLine(cx + bw - 7, cy + 7, cx + 7, cy + bh - 7);
-        g2.setStroke(new BasicStroke(1f));
-
-        g2.setColor(new Color(0, 70, 200));
-        g2.drawLine(x, y + 10, x, y + h - 10);
-        g2.drawLine(x + w, y + 10, x + w, y + h - 10);
-        g2.drawLine(x + 10, y, x + w - 10, y);
-        g2.drawLine(x + 10, y + h, x + w - 10, y + h);
+        drawXPWindowChrome(g2, x, y, w, h, new Color(192, 192, 192), "Minesweeper");
 
         int panelX = x + 12;
         int panelY = y + 42;
@@ -667,17 +657,18 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.drawString(time, trayX + (W - trayX - timeWidth) / 2, y + TASKBAR_H / 2 + 5);
     }
 
-    private void drawWin7Scene(BufferedImage buffer, Graphics2D g2) {
-        drawWin7Desktop(buffer, g2);
-        
-        if (totalTime >= 4.5) {
-            drawWin7MinecraftWindow(g2, 70, 40, 460, 380);
+    private void drawWin7Scene(Graphics2D g2) {
+        drawWin7Desktop(g2);
+
+        if (totalTime >= MINECRAFT_WINDOW_APPEAR_AT) {
+            drawWin7MinecraftWindow(g2, MINECRAFT_WINDOW.x, MINECRAFT_WINDOW.y,
+                    MINECRAFT_WINDOW.width, MINECRAFT_WINDOW.height);
         }
-        
+
         drawWin7Taskbar(g2);
     }
 
-    private void drawWin7Desktop(BufferedImage buffer, Graphics2D g2) {
+    private void drawWin7Desktop(Graphics2D g2) {
         GradientPaint sky = new GradientPaint(0, 0, new Color(15, 95, 185), 0, H, new Color(5, 45, 105));
         g2.setPaint(sky);
         g2.fillRect(0, 0, W, H);
@@ -1029,7 +1020,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.drawString(time, trayX + (trayW - timeWidth) / 2, y + TASKBAR_H / 2 + 4);
     }
 
-    private void drawWin11Scene(BufferedImage buffer, Graphics2D g2) {
+    private void drawWin11Scene(Graphics2D g2) {
         drawWin11Desktop(g2);
         drawWin11Taskbar(g2);
     }
