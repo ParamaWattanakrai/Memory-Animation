@@ -8,8 +8,7 @@ import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 
 /**
- * Animates a "Windows XP -> Windows 7 -> Windows 11" desktop transition sequence,
- * complete with a Minesweeper easter egg and a retro-explosion wipe effect between eras.
+ * Animates a "Windows XP -> Windows 7 -> Windows 11 -> Black Screen" sequence.
  */
 public class Assignment1_67050314 extends JPanel implements Runnable {
 
@@ -25,6 +24,8 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private static final double WIN7_START = XP_END + TRANSITION_DURATION;
     private static final double WIN7_TO_WIN11_START = 7.5;
     private static final double WIN11_START = WIN7_TO_WIN11_START + TRANSITION_DURATION;
+    private static final double WIN11_TO_BLACK_START = 12.5; 
+    private static final double BLACK_START = WIN11_TO_BLACK_START + TRANSITION_DURATION;
 
     private static final double MINECRAFT_WINDOW_APPEAR_AT = WIN7_START;
 
@@ -103,8 +104,13 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         } else if (totalTime < WIN11_START) {
             drawTransition(g2, WIN7_TO_WIN11_START, TRANSITION_2_X, TRANSITION_2_Y,
                     () -> drawWin7Scene(g2), () -> drawWin11Scene(g2));
-        } else {
+        } else if (totalTime < WIN11_TO_BLACK_START) {
             drawWin11Scene(g2);
+        } else if (totalTime < BLACK_START) {
+            drawTransitionNoExplosion(g2, WIN11_TO_BLACK_START, W / 2, H / 2, 
+                    () -> drawWin11Scene(g2), () -> drawBlackScene(g2));
+        } else {
+            drawBlackScene(g2);
         }
 
         drawDebugInfo(g2);
@@ -125,6 +131,122 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setClip(oldClip);
 
         drawRetroExplosion(g2, originX, originY, progress);
+    }
+
+    private void drawTransitionNoExplosion(Graphics2D g2, double phaseStart, int originX, int originY,
+                                 Runnable drawOldScene, Runnable drawNewScene) {
+        double progress = (totalTime - phaseStart) / TRANSITION_DURATION;
+        double maxDist = Math.hypot(W, H);
+        double radius = Math.pow(progress, 2.5) * maxDist;
+
+        drawOldScene.run();
+
+        Shape oldClip = g2.getClip();
+        g2.setClip(new Ellipse2D.Double(originX - radius, originY - radius, radius * 2, radius * 2));
+        drawNewScene.run();
+        g2.setClip(oldClip);
+    }
+
+    private void drawBlackScene(Graphics2D g2) {
+        g2.setColor(Color.BLACK);
+        g2.fillRect(0, 0, W, H);
+        
+        drawSahur(g2, W / 2, H / 2 - 20);
+    }
+
+    private void drawSahur(Graphics2D g2, int cx, int cy) {
+        Color baseBrown = new Color(175, 105, 55);
+        Color darkBrown = new Color(115, 60, 20);
+        Color shadowBrown = new Color(75, 35, 15);
+        Color highlight = new Color(210, 140, 80);
+
+        // Legs
+        g2.setStroke(new BasicStroke(14, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.setColor(darkBrown);
+        g2.drawLine(cx - 20, cy + 140, cx - 25, cy + 250); // Left leg
+        g2.drawLine(cx + 25, cy + 140, cx + 30, cy + 250); // Right leg
+
+        // Feet
+        g2.setColor(baseBrown);
+        g2.fillOval(cx - 50, cy + 240, 45, 18); // Left foot
+        g2.fillOval(cx + 5, cy + 240, 45, 18);  // Right foot
+        
+        // Toes
+        g2.fillOval(cx - 50, cy + 245, 12, 12);
+        g2.fillOval(cx - 35, cy + 247, 10, 10);
+        g2.fillOval(cx + 35, cy + 245, 12, 12);
+        g2.fillOval(cx + 20, cy + 247, 10, 10);
+
+        // Body 
+        g2.setColor(baseBrown);
+        g2.fillRoundRect(cx - 45, cy - 180, 90, 330, 45, 45);
+
+        // Body shading (left edge)
+        g2.setColor(darkBrown);
+        Shape oldClip = g2.getClip();
+        // Use clip() to intersect with the transition circle, rather than overwriting it
+        g2.clip(new RoundRectangle2D.Double(cx - 45, cy - 180, 90, 330, 45, 45));
+        g2.fillOval(cx - 60, cy - 180, 35, 330);
+        g2.setClip(oldClip); // Restore old clip instead of setting to null
+        
+        // Eyes background
+        g2.setColor(new Color(235, 225, 205));
+        g2.fillOval(cx - 42, cy - 135, 36, 46); // Left eye
+        g2.fillOval(cx + 6, cy - 145, 42, 52);  // Right eye
+
+        // Eye outlines
+        g2.setColor(shadowBrown);
+        g2.setStroke(new BasicStroke(3));
+        g2.drawOval(cx - 42, cy - 135, 36, 46);
+        g2.drawOval(cx + 6, cy - 145, 42, 52);
+
+        // Pupils
+        g2.setColor(Color.BLACK);
+        g2.fillOval(cx - 28, cy - 118, 14, 20);
+        g2.fillOval(cx + 16, cy - 128, 16, 22);
+        
+        // Eye highlights
+        g2.setColor(Color.WHITE);
+        g2.fillOval(cx - 24, cy - 114, 5, 7);
+        g2.fillOval(cx + 20, cy - 124, 6, 8);
+
+        // Nose
+        g2.setColor(highlight);
+        int[] nx = {cx - 5, cx + 18, cx + 5};
+        int[] ny = {cy - 115, cy - 105, cy - 65};
+        g2.fillPolygon(nx, ny, 3);
+        g2.setColor(shadowBrown);
+        g2.drawPolygon(nx, ny, 3);
+        
+        // Mouth
+        g2.setStroke(new BasicStroke(5));
+        g2.drawArc(cx - 10, cy - 80, 45, 35, 190, 110);
+
+        // Arms
+        g2.setStroke(new BasicStroke(12, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        
+        // Right arm (viewer's left)
+        g2.setColor(darkBrown);
+        g2.drawLine(cx - 40, cy - 10, cx - 65, cy + 90);
+        
+        // Left arm (viewer's right)
+        g2.drawLine(cx + 40, cy - 10, cx + 55, cy + 90);
+        
+        // Club / Bat
+        g2.setColor(shadowBrown);
+        int[] clubX = {cx - 50, cx - 75, cx - 140, cx - 110};
+        int[] clubY = {cy + 75, cy + 70, cy + 260, cy + 270};
+        g2.fillPolygon(clubX, clubY, 4);
+        
+        // Club highlights
+        g2.setColor(baseBrown);
+        g2.setStroke(new BasicStroke(6, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawLine(cx - 65, cy + 85, cx - 120, cy + 250);
+
+        // Hands
+        g2.setColor(baseBrown);
+        g2.fillOval(cx - 75, cy + 80, 22, 22); // Hand holding club
+        g2.fillOval(cx + 45, cy + 85, 20, 20); // Free hand
     }
 
     private Point minesweeperExplosionOrigin() {
@@ -795,9 +917,10 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setStroke(new BasicStroke(1f));
 
         Shape oldClip = g2.getClip();
-        g2.setClip(new Rectangle2D.Double(clientX, clientY, clientW, clientH));
+        // Use clip() here as well to intersect with the transition circle instead of replacing it
+        g2.clip(new Rectangle2D.Double(clientX, clientY, clientW, clientH));
         drawMinecraftScene(g2, clientX, clientY, clientW, clientH);
-        g2.setClip(oldClip);
+        g2.setClip(oldClip); // Restore old clip properly
 
         g2.setColor(new Color(0, 0, 0, 150));
         g2.drawRect(clientX - 1, clientY - 1, clientW + 1, clientH + 1);
