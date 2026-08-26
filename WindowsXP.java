@@ -83,7 +83,7 @@ public class WindowsXPDemo extends JPanel implements Runnable {
 
         drawDesktop(buffer, g2);
         drawWindow(g2, 60, 70, 310, 210);
-        drawMinesweeperWindow(g2, 180, 100, 280, 340);
+        drawMinesweeperWindow(g2, 170, 80, 280, 340);
         drawBouncingIcon(g2, iconX, iconY);
         drawTaskbar(g2);
         
@@ -323,17 +323,23 @@ public class WindowsXPDemo extends JPanel implements Runnable {
         int panelH = 38;
         
         g2.setColor(new Color(128, 128, 128));
+        g2.setStroke(new BasicStroke(2f));
         g2.drawRect(panelX, panelY, panelW, panelH);
         g2.setColor(Color.WHITE);
-        g2.drawRect(panelX + 1, panelY + 1, panelW, panelH);
+        g2.drawRect(panelX + 2, panelY + 2, panelW - 4, panelH - 4);
+        g2.setStroke(new BasicStroke(1f));
         g2.setColor(new Color(192, 192, 192));
-        g2.fillRect(panelX + 1, panelY + 1, panelW - 1, panelH - 1);
+        g2.fillRect(panelX + 2, panelY + 2, panelW - 4, panelH - 4);
 
         int gameStep = (int)(totalTime * 0.5) % 4;
 
         // Score display
+        g2.setColor(new Color(128, 128, 128));
+        g2.drawRect(panelX + 8, panelY + 7, 40, 24);
+        g2.setColor(Color.WHITE);
+        g2.drawRect(panelX + 9, panelY + 8, 38, 22);
         g2.setColor(Color.BLACK);
-        g2.fillRect(panelX + 8, panelY + 7, 40, 24);
+        g2.fillRect(panelX + 10, panelY + 9, 36, 20);
         g2.setColor(Color.RED);
         g2.setFont(new Font("Monospaced", Font.BOLD, 18));
         g2.drawString("010", panelX + 11, panelY + 25);
@@ -344,11 +350,13 @@ public class WindowsXPDemo extends JPanel implements Runnable {
         g2.setColor(new Color(192, 192, 192));
         g2.fillRect(faceX, faceY, 26, 26);
         g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(2f));
         g2.drawLine(faceX, faceY, faceX + 25, faceY);
         g2.drawLine(faceX, faceY, faceX, faceY + 25);
         g2.setColor(new Color(128, 128, 128));
         g2.drawLine(faceX + 25, faceY, faceX + 25, faceY + 25);
         g2.drawLine(faceX, faceY + 25, faceX + 25, faceY + 25);
+        g2.setStroke(new BasicStroke(1f));
         
         g2.setColor(Color.YELLOW);
         g2.fillOval(faceX + 3, faceY + 3, 20, 20);
@@ -356,66 +364,63 @@ public class WindowsXPDemo extends JPanel implements Runnable {
         g2.drawOval(faceX + 3, faceY + 3, 20, 20);
         
         if (gameStep == 3) {
-            // Dead face (X eyes, frown)
             g2.drawLine(faceX + 7, faceY + 8, faceX + 11, faceY + 12);
             g2.drawLine(faceX + 7, faceY + 12, faceX + 11, faceY + 8);
             g2.drawLine(faceX + 15, faceY + 8, faceX + 19, faceY + 12);
             g2.drawLine(faceX + 15, faceY + 12, faceX + 19, faceY + 8);
             g2.drawArc(faceX + 8, faceY + 13, 10, 8, 0, 180);
         } else {
-            // Happy face
             g2.fillRect(faceX + 8, faceY + 9, 2, 3);
             g2.fillRect(faceX + 16, faceY + 9, 2, 3);
             g2.drawArc(faceX + 8, faceY + 11, 10, 8, 0, -180);
         }
 
         // Timer display
+        g2.setColor(new Color(128, 128, 128));
+        g2.drawRect(panelX + panelW - 48, panelY + 7, 40, 24);
+        g2.setColor(Color.WHITE);
+        g2.drawRect(panelX + panelW - 47, panelY + 8, 38, 22);
         g2.setColor(Color.BLACK);
-        g2.fillRect(panelX + panelW - 48, panelY + 7, 40, 24);
+        g2.fillRect(panelX + panelW - 46, panelY + 9, 36, 20);
         g2.setColor(Color.RED);
         int timeVal = (gameStep == 3) ? 43 : (int)(totalTime * 3) % 999;
         String timeStr = String.format("%03d", timeVal);
         g2.drawString(timeStr, panelX + panelW - 45, panelY + 25);
 
-        // Minesweeper Grid Area (10 cols x 10 rows)
+        // 9x9 Grid Area
         int gridX = panelX;
         int gridY = panelY + panelH + 8;
         int gridW = panelW;
         int gridH = h - (gridY - y) - 12;
 
         g2.setColor(new Color(128, 128, 128));
+        g2.setStroke(new BasicStroke(2f));
         g2.drawRect(gridX, gridY, gridW, gridH);
         g2.setColor(Color.WHITE);
-        g2.drawRect(gridX + 1, gridY + 1, gridW, gridH);
+        g2.drawRect(gridX + 2, gridY + 2, gridW - 4, gridH - 4);
+        g2.setStroke(new BasicStroke(1f));
         g2.setColor(new Color(192, 192, 192));
-        g2.fillRect(gridX + 1, gridY + 1, gridW - 1, gridH - 1);
+        g2.fillRect(gridX + 2, gridY + 2, gridW - 4, gridH - 4);
 
-        int cols = 10;
-        int rows = 10;
+        int cols = 9;
+        int rows = 9;
         int cellW = (gridW - 6) / cols;
         int cellH = (gridH - 6) / rows;
 
-        // First click revealed patch (Image 1)
         int[][] patchStep1 = {
             {2, 0, 1, 1},
             {2, 1, 1, 2}, {3, 1, 1, 1}, {4, 1, 1, 1}, {5, 1, 1, 1}, {7, 1, 1, 1}, {8, 1, 1, 1},
-            {5, 2, 1, 1}, {7, 2, 1, 1},
-            {0, 3, 1, 1}, {1, 3, 1, 2}, {3, 3, 1, 2}, {4, 3, 1, 1}, {5, 3, 1, 1}, {7, 1, 1, 2}, {7, 3, 1, 2},
-            {1, 4, 1, 1}, {2, 4, 1, 1}, {3, 4, 1, 1}, {7, 4, 1, 2},
-            {5, 5, 1, 1}, {6, 5, 1, 1}, {7, 5, 1, 1}, {8, 5, 1, 2},
-            {0, 6, 1, 2}, {1, 6, 1, 2}, {2, 6, 1, 1}, {4, 6, 1, 1}, {6, 6, 1, 1}, {7, 6, 1, 1}, {8, 6, 1, 1}, {9, 6, 1, 1},
-            {2, 7, 1, 1}, {4, 7, 1, 1}, {5, 7, 1, 1}, {6, 7, 1, 1},
-            {2, 8, 1, 1}
+            {3, 2, 1, 2}, {5, 2, 1, 1}, {7, 2, 1, 1},
+            {0, 3, 1, 1}, {1, 3, 1, 2}, {3, 3, 1, 2}, {5, 3, 1, 1}, {6, 3, 1, 0}, {7, 3, 1, 2},
+            {1, 4, 1, 1}, {2, 4, 1, 1}, {3, 4, 1, 1}, {4, 4, 1, 0}, {5, 4, 1, 0}, {6, 4, 1, 0}, {7, 4, 1, 2},
+            {0, 5, 1, 0}, {1, 5, 1, 0}, {2, 5, 1, 0}, {3, 5, 1, 0}, {4, 5, 1, 1}, {5, 5, 1, 1}, {6, 5, 1, 1}, {7, 5, 1, 2},
+            {0, 6, 1, 2}, {1, 6, 1, 2}, {2, 6, 1, 1}, {3, 6, 1, 0}, {4, 6, 1, 1}, {6, 6, 1, 1}, {7, 6, 1, 1}, {8, 6, 1, 1},
+            {2, 7, 1, 1}, {3, 7, 1, 0}, {4, 7, 1, 1}, {5, 7, 1, 1}, {6, 7, 1, 1},
+            {2, 8, 1, 1}, {3, 8, 1, 0}, {4, 8, 1, 0}, {5, 8, 1, 0}, {6, 8, 1, 0}, {7, 8, 1, 0}, {8, 8, 1, 0}
         };
 
-        // Second click adds the 2 at (4,3) 1-based -> col 3, row 2 (0-based) (Image 2)
-        int[][] patchStep2 = {
-            {3, 2, 1, 2}
-        };
-
-        // Mines location for Step 3 (Game Over)
         int[][] mines = {
-            {1, 1}, {1, 2}, {2, 3}, {8, 2}, {9, 4}, {9, 5}, {5, 6}, {0, 8}, {1, 8}
+            {1, 1}, {1, 2}, {4, 2}, {8, 2}, {2, 3}, {8, 4}, {8, 5}, {5, 6}, {0, 7}, {1, 7}
         };
 
         boolean hitBomb = (gameStep == 3);
@@ -431,17 +436,15 @@ public class WindowsXPDemo extends JPanel implements Runnable {
                 if (gameStep >= 1) {
                     for (int i = 0; i < patchStep1.length; i++) {
                         if (patchStep1[i][0] == c && patchStep1[i][1] == r) {
-                            isOpen = true;
-                            cellVal = patchStep1[i][3];
-                            break;
-                        }
-                    }
-                }
-                if (gameStep >= 2) {
-                    for (int i = 0; i < patchStep2.length; i++) {
-                        if (patchStep2[i][0] == c && patchStep2[i][1] == r) {
-                            isOpen = true;
-                            cellVal = patchStep2[i][3];
+                            if (c == 3 && r == 2 && patchStep1[i][3] == 2) {
+                                if (gameStep >= 2) {
+                                    isOpen = true;
+                                    cellVal = patchStep1[i][3];
+                                }
+                            } else {
+                                isOpen = true;
+                                cellVal = patchStep1[i][3];
+                            }
                             break;
                         }
                     }
@@ -456,7 +459,7 @@ public class WindowsXPDemo extends JPanel implements Runnable {
                 }
 
                 if (hitBomb && isMine) {
-                    boolean isHitCell = (c == 9 && r == 4);
+                    boolean isHitCell = (c == 8 && r == 4);
                     if (isHitCell) {
                         g2.setColor(new Color(230, 80, 80));
                     } else {
@@ -494,23 +497,27 @@ public class WindowsXPDemo extends JPanel implements Runnable {
                     g2.setColor(new Color(128, 128, 128));
                     g2.drawRect(cx2, cy2, cellW, cellH);
 
-                    if (cellVal == 1) g2.setColor(Color.BLUE);
-                    else if (cellVal == 2) g2.setColor(new Color(0, 128, 0));
-                    else g2.setColor(Color.RED);
+                    if (cellVal > 0) {
+                        if (cellVal == 1) g2.setColor(Color.BLUE);
+                        else if (cellVal == 2) g2.setColor(new Color(0, 128, 0));
+                        else g2.setColor(Color.RED);
 
-                    g2.setFont(new Font("Tahoma", Font.BOLD, 11));
-                    g2.drawString(String.valueOf(cellVal), cx2 + 4, cy2 + cellH - 4);
+                        g2.setFont(new Font("Tahoma", Font.BOLD, 11));
+                        g2.drawString(String.valueOf(cellVal), cx2 + 4, cy2 + cellH - 4);
+                    }
                 } else {
                     g2.setColor(new Color(192, 192, 192));
                     g2.fillRect(cx2, cy2, cellW, cellH);
                     
                     g2.setColor(Color.WHITE);
+                    g2.setStroke(new BasicStroke(1.5f));
                     g2.drawLine(cx2, cy2, cx2 + cellW - 1, cy2);
                     g2.drawLine(cx2, cy2, cx2, cy2 + cellH - 1);
                     
                     g2.setColor(new Color(128, 128, 128));
                     g2.drawLine(cx2 + cellW - 1, cy2, cx2 + cellW - 1, cy2 + cellH - 1);
                     g2.drawLine(cx2, cy2 + cellH - 1, cx2 + cellW - 1, cy2 + cellH - 1);
+                    g2.setStroke(new BasicStroke(1f));
                 }
             }
         }
