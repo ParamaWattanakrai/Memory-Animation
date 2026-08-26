@@ -10,14 +10,6 @@ import javax.swing.*;
 /**
  * Animates a "Windows XP -> Windows 7 -> Windows 11" desktop transition sequence,
  * complete with a Minesweeper easter egg and a retro-explosion wipe effect between eras.
- *
- * Structure of this file:
- *  1) App bootstrap (main / animation loop)
- *  2) Scene dispatch (paintComponent + transition effect)
- *  3) Windows XP scene
- *  4) Windows 7 scene
- *  5) Windows 11 scene
- *  6) Shared window-chrome helpers + debug overlay
  */
 public class Assignment1_67050314 extends JPanel implements Runnable {
 
@@ -28,18 +20,12 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private static final int TARGET_FPS = 60;
 
     // ---- Animation timeline (seconds since start) ----
-    // [0, XP_END)                       -> Windows XP desktop
-    // [XP_END, WIN7_START)              -> XP -> Win7 explosion transition
-    // [WIN7_START, WIN7_TO_WIN11_START) -> Windows 7 desktop
-    // [WIN7_TO_WIN11_START, WIN11_START)-> Win7 -> Win11 explosion transition
-    // [WIN11_START, ...)                -> Windows 11 desktop
     private static final double XP_END = 2.5;
     private static final double TRANSITION_DURATION = 2.0;
     private static final double WIN7_START = XP_END + TRANSITION_DURATION;
     private static final double WIN7_TO_WIN11_START = 7.5;
     private static final double WIN11_START = WIN7_TO_WIN11_START + TRANSITION_DURATION;
 
-    // Time (relative to WIN7_START) at which the Minecraft window appears in the Win7 scene.
     private static final double MINECRAFT_WINDOW_APPEAR_AT = WIN7_START;
 
     // ---- Shared window chrome ----
@@ -50,12 +36,10 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private static final Rectangle MINESWEEPER_WINDOW = new Rectangle(170, 80, 280, 340);
     private static final Rectangle MINECRAFT_WINDOW = new Rectangle(70, 40, 460, 380);
 
-    // Screen-space point the second (Win7 -> Win11) explosion originates from.
     private static final int TRANSITION_2_X = 298;
     private static final int TRANSITION_2_Y = 205;
 
     double totalTime = 0;
-
     int mouseX = 0, mouseY = 0;
 
     public Assignment1_67050314() {
@@ -127,17 +111,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g.drawImage(buffer, 0, 0, null);
     }
 
-    /**
-     * Renders a circular "explosion wipe" transition from one scene to another: the old scene
-     * is drawn, an expanding circular reveal clips in the new scene, and a retro explosion
-     * effect plays over the seam.
-     *
-     * @param phaseStart   the totalTime value at which this transition begins
-     * @param originX      x of the point the wipe expands from
-     * @param originY      y of the point the wipe expands from
-     * @param drawOldScene renders the scene being transitioned away from
-     * @param drawNewScene renders the scene being transitioned into
-     */
     private void drawTransition(Graphics2D g2, double phaseStart, int originX, int originY,
                                  Runnable drawOldScene, Runnable drawNewScene) {
         double progress = (totalTime - phaseStart) / TRANSITION_DURATION;
@@ -154,7 +127,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         drawRetroExplosion(g2, originX, originY, progress);
     }
 
-    /** Screen point at the center of the Minesweeper grid's mine hit, used as the first explosion origin. */
     private Point minesweeperExplosionOrigin() {
         int panelX = MINESWEEPER_WINDOW.x + 12;
         int panelY = MINESWEEPER_WINDOW.y + 42;
@@ -236,6 +208,33 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.fillPolygon(x, y, x.length);
     }
 
+    private void drawMidpointCircle(Graphics2D g2, int cx, int cy, int radius, Color color) {
+        g2.setColor(color);
+        int x = 0;
+        int y = radius;
+        int p = 1 - radius;
+
+        fillCircleSymmetric(g2, cx, cy, x, y);
+
+        while (x < y) {
+            x++;
+            if (p < 0) {
+                p += 2 * x + 1;
+            } else {
+                y--;
+                p += 2 * (x - y) + 1;
+            }
+            fillCircleSymmetric(g2, cx, cy, x, y);
+        }
+    }
+
+    private void fillCircleSymmetric(Graphics2D g2, int cx, int cy, int x, int y) {
+        g2.drawLine(cx - x, cy + y, cx + x, cy + y);
+        g2.drawLine(cx - x, cy - y, cx + x, cy - y);
+        g2.drawLine(cx - y, cy + x, cx + y, cy + x);
+        g2.drawLine(cx - y, cy - x, cx + y, cy - x);
+    }
+
     private void drawXPScene(Graphics2D g2) {
         drawXPDesktop(g2);
         drawWindow(g2, MEMORIES_WINDOW.x, MEMORIES_WINDOW.y, MEMORIES_WINDOW.width, MEMORIES_WINDOW.height);
@@ -264,6 +263,8 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         drawPoly(g2, cSkyDark, 
             new int[]{220, 600, 600, 480, 450, 400, 320, 280, 250}, 
             new int[]{0,   0,   250, 280, 210, 220, 160, 100, 50});
+
+        drawMidpointCircle(g2, 510, 65, 38, new Color(233, 239, 246));
 
         drawPoly(g2, cCloudShadow,
             new int[]{0, 100, 150, 200, 350, 450, 600, 600, 0},
@@ -320,10 +321,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             new int[]{540, 555, 570, 580, 600, 600});
     }
 
-    /**
-     * Shared XP-style window chrome: drop shadow, body fill, gradient title bar with
-     * min/max/close buttons, inner highlight, and outer accent border.
-     */
     private void drawXPWindowChrome(Graphics2D g2, int x, int y, int w, int h, Color bodyColor, String title) {
         g2.setColor(new Color(0, 0, 0, 60));
         g2.fill(new RoundRectangle2D.Double(x + 6, y + 6, w, h, 12, 12));
@@ -360,7 +357,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.drawLine(x + 10, y + h, x + w - 10, y + h);
     }
 
-    /** The minimize / maximize / close button cluster in the top-right of an XP-style window. */
     private void drawWindowControlButtons(Graphics2D g2, int x, int y, int w) {
         int bw = 22, bh = 22, gap = 2;
         int bx = x + w - (bw * 3 + gap * 2) - 6, by = y + 4;
