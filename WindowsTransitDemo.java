@@ -4,8 +4,6 @@ import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedList;
-import java.util.Queue;
 import javax.swing.*;
 
 public class WindowsTransitionDemo extends JPanel implements Runnable {
@@ -83,7 +81,6 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
         Graphics2D g2 = buffer.createGraphics();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // Calculate exact bomb coordinate inside the Minesweeper window
         int winX = 170, winY = 80, winW = 280, winH = 340;
         int panelX = winX + 12;
         int panelY = winY + 42;
@@ -98,23 +95,12 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
         int explosionX = gridX + 4 + 8 * cellW + cellW / 2;
         int explosionY = gridY + 4 + 4 * cellH + cellH / 2;
 
-        // Transition logic: totalTime < 7.0 is XP + Minesweeper, 7.0 to 9.0 is Explosion, 9.0 to 11.0 is Expanding Reveal, > 11.0 is Windows 7
-        if (totalTime < 7.0) {
-            drawXPDesktop(buffer, g2);
-            drawWindow(g2, 60, 70, 310, 210);
-            drawMinesweeperWindow(g2, winX, winY, winW, winH);
-            drawBouncingIcon(g2, iconX, iconY);
-            drawXPTaskbar(g2);
-            drawDebugInfo(g2);
-        } else if (totalTime >= 7.0 && totalTime < 9.0) {
-            // Explosion Phase originating from bomb coordinate
-            drawXPDesktop(buffer, g2);
-            drawRetroExplosion(g2, explosionX, explosionY, (totalTime - 7.0) / 2.0);
-        } else if (totalTime >= 9.0 && totalTime < 11.0) {
-            // Expanding Circular Reveal Phase from bomb coordinate
-            double revealProgress = (totalTime - 9.0) / 2.0;
+        if (totalTime < 5.5) {
+            drawXPScene(buffer, g2, winX, winY, winW, winH);
+        } else if (totalTime >= 5.5 && totalTime < 7.5) {
+            double progress = (totalTime - 5.5) / 2.0;
             double maxDist = Math.hypot(W, H);
-            double currentRadius = revealProgress * maxDist;
+            double currentRadius = progress * maxDist;
 
             drawXPDesktop(buffer, g2);
 
@@ -125,21 +111,33 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
             );
             g2.setClip(revealCircle);
 
-            drawWin7Desktop(buffer, g2);
-            drawWin7Window(g2, 130, 80, 340, 220);
-            drawBouncingIcon(g2, iconX, iconY);
-            drawWin7Taskbar(g2);
-
+            drawWin7Scene(buffer, g2);
             g2.setClip(oldClip);
+
+            drawRetroExplosion(g2, explosionX, explosionY, progress);
         } else {
-            // Windows 7 Fully Revealed Phase
-            drawWin7Desktop(buffer, g2);
-            drawWin7Window(g2, 130, 80, 340, 220);
-            drawBouncingIcon(g2, iconX, iconY);
-            drawWin7Taskbar(g2);
+            drawWin7Scene(buffer, g2);
         }
 
+        // Persistent debug info across all phases
+        drawDebugInfo(g2);
+
         g.drawImage(buffer, 0, 0, null);
+    }
+
+    private void drawXPScene(BufferedImage buffer, Graphics2D g2, int winX, int winY, int winW, int winH) {
+        drawXPDesktop(buffer, g2);
+        drawWindow(g2, 60, 70, 310, 210);
+        drawMinesweeperWindow(g2, winX, winY, winW, winH);
+        drawBouncingIcon(g2, iconX, iconY);
+        drawXPTaskbar(g2);
+    }
+
+    private void drawWin7Scene(BufferedImage buffer, Graphics2D g2) {
+        drawWin7Desktop(buffer, g2);
+        drawWin7Window(g2, 130, 80, 340, 220);
+        drawBouncingIcon(g2, iconX, iconY);
+        drawWin7Taskbar(g2);
     }
 
     private void drawRetroExplosion(Graphics2D g2, int cx, int cy, double progress) {
@@ -526,7 +524,12 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
         g2.setColor(new Color(192, 192, 192));
         g2.fillRect(panelX + 2, panelY + 2, panelW - 4, panelH - 4);
 
-        int gameStep = (int)(totalTime * 0.5) % 4;
+        int gameStep;
+        if (totalTime < 5.4) {
+            gameStep = (int)(totalTime * 0.5) % 3;
+        } else {
+            gameStep = 3; 
+        }
 
         g2.setColor(new Color(128, 128, 128));
         g2.drawRect(panelX + 8, panelY + 7, 40, 24);
