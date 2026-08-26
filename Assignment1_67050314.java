@@ -45,7 +45,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         (new Thread(m)).start();
     }
 
-    // CORE ANIMATION
     @Override
     public void run() {
         double lastTime = System.currentTimeMillis();
@@ -125,10 +124,10 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             g2.setClip(oldClip);
 
             drawRetroExplosion(g2, explosion1X, explosion1Y, progress);
-        } else if (totalTime >= 4.5 && totalTime < 10.0) {
+        } else if (totalTime >= 4.5 && totalTime < 7.5) { // Time adjusted from 10.0 to 7.5
             drawWin7Scene(buffer, g2);
-        } else if (totalTime >= 10.0 && totalTime < 12.0) {
-            double progress = (totalTime - 10.0) / 2.0;
+        } else if (totalTime >= 7.5 && totalTime < 9.5) { // Time adjusted from 10.0/12.0 to 7.5/9.5
+            double progress = (totalTime - 7.5) / 2.0;
             double maxDist = Math.hypot(W, H);
             double currentRadius = Math.pow(progress, 2.5) * maxDist;
 
@@ -153,12 +152,11 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g.drawImage(buffer, 0, 0, null);
     }
 
-    // UTILS
     private void drawBouncingIcon(Graphics2D g2, double x, double y) {
         int s = ICON_SIZE / 2;
         int arc = 12;
 
-        if (totalTime >= 10.0) { 
+        if (totalTime >= 7.5) { // Time adjusted from 10.0 to 7.5
             g2.setColor(new Color(0, 0, 0, 30));
             g2.fill(new RoundRectangle2D.Double(x + 2, y + 4, ICON_SIZE, ICON_SIZE, 12, 12));
     
@@ -235,11 +233,14 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
 
     private void drawDebugInfo(Graphics2D g2) {
         g2.setColor(Color.BLACK);
-        g2.fillRect(5, 5, 120, 25);
+        g2.fillRect(5, 5, 130, 45); // Increased height to 45 to fit the timer
         g2.setColor(Color.GREEN);
-        g2.drawRect(5, 5, 120, 25);
+        g2.drawRect(5, 5, 130, 45);
         g2.setFont(new Font("Monospaced", Font.BOLD, 14));
         g2.drawString("X: " + mouseX + " Y: " + mouseY, 15, 23);
+        
+        // Add the formatted animation timer
+        g2.drawString(String.format("Time: %.2fs", totalTime), 15, 40);
         
         g2.setColor(Color.RED);
         g2.drawLine(mouseX - 10, mouseY, mouseX + 10, mouseY);
@@ -289,7 +290,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.fillPolygon(x, y, x.length);
     }
 
-    // WINDOWS XP
     private void drawXPScene(BufferedImage buffer, Graphics2D g2, int winX, int winY, int winW, int winH) {
         drawXPDesktop(buffer, g2);
         drawWindow(g2, 60, 70, 310, 210);
@@ -515,7 +515,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
 
         int gameStep;
         if (totalTime < 2.4) {
-            // Replaced modulo with min() clamp to prevent wrapping back to 0
             gameStep = Math.min(2, (int)(totalTime * 1.5));
         } else {
             gameStep = 3; 
@@ -757,11 +756,10 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.drawString(time, trayX + (W - trayX - timeWidth) / 2, y + TASKBAR_H / 2 + 5);
     }
 
-    // WINDOWS 7
     private void drawWin7Scene(BufferedImage buffer, Graphics2D g2) {
         drawWin7Desktop(buffer, g2);
         
-        if (totalTime >= 5.5) {
+        if (totalTime >= 4.5) { // Adjusted from 5.5 to 4.5 to spawn window earlier
             drawWin7MinecraftWindow(g2, 70, 40, 460, 380);
         }
         
@@ -971,7 +969,8 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             new int[]{cy + 170, cy + 190, cy + ch, cy + ch}, 4
         );
 
-        boolean isFlashing = (totalTime >= 8.0) && ((int)(totalTime * 8) % 2 == 0);
+        // Timing updated: Creeper starts flashing at 5.5s instead of 8.0s
+        boolean isFlashing = (totalTime >= 5.5) && ((int)(totalTime * 8) % 2 == 0); 
         int crx = cx + cw / 2 - 22;
         int cry = cy + 95;
 
@@ -1121,7 +1120,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.drawString(time, trayX + (trayW - timeWidth) / 2, y + TASKBAR_H / 2 + 4);
     }
 
-    // WINDOWS 11
     private void drawWin11Scene(BufferedImage buffer, Graphics2D g2) {
         drawWin11Desktop(g2);
         drawBouncingIcon(g2, iconX, iconY);
