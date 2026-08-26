@@ -2,14 +2,16 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 
-public class WindowsTransitionDemo extends JPanel implements Runnable {
+public class Assignment1_67050314 extends JPanel implements Runnable {
 
     static final int W = 600, H = 600;
     static final int TASKBAR_H = 34;
+    static final int WIN11_TASKBAR_H = 48; // Windows 11 taskbar is slightly thicker
     static final int ICON_SIZE = 56;
 
     double iconX = 100, iconY = 100;
@@ -18,7 +20,7 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
     
     int mouseX = 0, mouseY = 0;
 
-    public WindowsTransitionDemo() {
+    public Assignment1_67050314() {
         addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
@@ -29,12 +31,12 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
     }
 
     public static void main(String[] args) {
-        WindowsTransitionDemo m = new WindowsTransitionDemo();
+        Assignment1_67050314 m = new Assignment1_67050314();
         m.setPreferredSize(new Dimension(W, H));
 
         JFrame f = new JFrame();
         f.add(m);
-        f.setTitle("Windows XP to Windows 7 Transition");
+        f.setTitle("Windows OS Transition Sequence");
         f.setResizable(false);
         f.pack();
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -68,7 +70,8 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
         iconY += iconVY * dt;
 
         double minX = 0, maxX = W - ICON_SIZE;
-        double minY = 0, maxY = H - TASKBAR_H - ICON_SIZE;
+        // Bouncing logic accommodates the maximum taskbar height
+        double minY = 0, maxY = H - WIN11_TASKBAR_H - ICON_SIZE;
 
         if (iconX <= minX) { iconX = minX; iconVX = Math.abs(iconVX); }
         if (iconX >= maxX) { iconX = maxX; iconVX = -Math.abs(iconVX); }
@@ -95,8 +98,14 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
         int gridH = winH - (gridY - winY) - 12;
         int cellW = (gridW - 6) / 9;
         int cellH = (gridH - 6) / 9;
-        int explosionX = gridX + 4 + 8 * cellW + cellW / 2;
-        int explosionY = gridY + 4 + 4 * cellH + cellH / 2;
+        
+        // Explosion 1 (Minesweeper) coordinates
+        int explosion1X = gridX + 4 + 8 * cellW + cellW / 2;
+        int explosion1Y = gridY + 4 + 4 * cellH + cellH / 2;
+        
+        // Explosion 2 (Minecraft Creeper) coordinates
+        int explosion2X = 298; 
+        int explosion2Y = 205; 
 
         if (totalTime < 5.5) {
             drawXPScene(buffer, g2, winX, winY, winW, winH);
@@ -109,7 +118,7 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
 
             Shape oldClip = g2.getClip();
             Ellipse2D.Double revealCircle = new Ellipse2D.Double(
-                explosionX - currentRadius, explosionY - currentRadius,
+                explosion1X - currentRadius, explosion1Y - currentRadius,
                 currentRadius * 2, currentRadius * 2
             );
             g2.setClip(revealCircle);
@@ -117,14 +126,32 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
             drawWin7Scene(buffer, g2);
             g2.setClip(oldClip);
 
-            drawRetroExplosion(g2, explosionX, explosionY, progress);
-        } else {
+            drawRetroExplosion(g2, explosion1X, explosion1Y, progress);
+        } else if (totalTime >= 7.5 && totalTime < 13.0) {
             drawWin7Scene(buffer, g2);
+        } else if (totalTime >= 13.0 && totalTime < 15.0) {
+            double progress = (totalTime - 13.0) / 2.0;
+            double maxDist = Math.hypot(W, H);
+            double currentRadius = progress * maxDist;
+
+            drawWin7Scene(buffer, g2);
+
+            Shape oldClip = g2.getClip();
+            Ellipse2D.Double revealCircle = new Ellipse2D.Double(
+                explosion2X - currentRadius, explosion2Y - currentRadius,
+                currentRadius * 2, currentRadius * 2
+            );
+            g2.setClip(revealCircle);
+
+            drawWin11Scene(buffer, g2);
+            g2.setClip(oldClip);
+
+            drawRetroExplosion(g2, explosion2X, explosion2Y, progress);
+        } else {
+            drawWin11Scene(buffer, g2);
         }
 
-        // Persistent debug info across all phases
         drawDebugInfo(g2);
-
         g.drawImage(buffer, 0, 0, null);
     }
 
@@ -138,11 +165,422 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
 
     private void drawWin7Scene(BufferedImage buffer, Graphics2D g2) {
         drawWin7Desktop(buffer, g2);
-        // drawWin7Window(g2, 130, 80, 340, 220);
+        drawWin7MinecraftWindow(g2, 70, 40, 460, 380);
         drawBouncingIcon(g2, iconX, iconY);
         drawWin7Taskbar(g2);
     }
 
+    private void drawWin11Scene(BufferedImage buffer, Graphics2D g2) {
+        drawWin11Desktop(g2);
+        drawBouncingIcon(g2, iconX, iconY);
+        drawWin11Taskbar(g2);
+    }
+
+    // ==========================================
+    // WINDOWS 11 DRAWING METHODS
+    // ==========================================
+    private void drawWin11Desktop(Graphics2D g2) {
+        GradientPaint bg = new GradientPaint(
+                0, 0, new Color(165, 195, 225),
+                W, H - WIN11_TASKBAR_H, new Color(195, 215, 238)
+        );
+        g2.setPaint(bg);
+        g2.fillRect(0, 0, W, H - WIN11_TASKBAR_H);
+
+        RadialGradientPaint centerGlow = new RadialGradientPaint(
+                new Point2D.Float(W * 0.5f, H * 0.4f), 400f,
+                new float[]{0.0f, 1.0f},
+                new Color[]{new Color(230, 242, 255, 180), new Color(165, 195, 225, 0)}
+        );
+        g2.setPaint(centerGlow);
+        g2.fillRect(0, 0, W, H - WIN11_TASKBAR_H);
+
+        drawBloomPetals(g2);
+    }
+
+    private void drawBloomPetals(Graphics2D g2) {
+        int cx = W / 2;
+        int bottomY = H - WIN11_TASKBAR_H;
+
+        Path2D.Double p1 = new Path2D.Double();
+        p1.moveTo(cx - 215, bottomY);
+        p1.curveTo(cx - 320, 110, cx - 150, 50, cx, 80);
+        p1.curveTo(cx + 220, 120, cx + 260, 280, cx + 170, bottomY);
+        p1.closePath();
+        g2.setPaint(new GradientPaint(cx - 120, 50, new Color(10, 45, 130), cx + 120, bottomY, new Color(0, 95, 210)));
+        g2.fill(p1);
+
+        Path2D.Double p2 = new Path2D.Double();
+        p2.moveTo(cx - 170, bottomY);
+        p2.curveTo(cx - 250, 150, cx - 70, 90, cx + 60, 130);
+        p2.curveTo(cx + 200, 180, cx + 185, 330, cx + 85, bottomY);
+        p2.closePath();
+        g2.setPaint(new GradientPaint(cx - 100, 90, new Color(15, 115, 235), cx + 70, bottomY, new Color(0, 60, 175)));
+        g2.fill(p2);
+
+        Path2D.Double p3 = new Path2D.Double();
+        p3.moveTo(cx - 120, bottomY);
+        p3.curveTo(cx - 185, 190, cx - 15, 130, cx + 85, 170);
+        p3.curveTo(cx + 145, 220, cx + 120, 350, cx - 15, bottomY);
+        p3.closePath();
+        g2.setPaint(new GradientPaint(cx - 65, 130, new Color(75, 175, 255), cx + 45, bottomY, new Color(20, 110, 220)));
+        g2.fill(p3);
+
+        Path2D.Double p4 = new Path2D.Double();
+        p4.moveTo(cx - 70, bottomY);
+        p4.curveTo(cx - 125, 250, cx + 20, 190, cx + 90, 230);
+        p4.curveTo(cx + 125, 290, cx + 55, 370, cx - 10, bottomY);
+        p4.closePath();
+        g2.setPaint(new GradientPaint(cx - 25, 190, new Color(135, 210, 255), cx + 25, bottomY, new Color(40, 130, 240)));
+        g2.fill(p4);
+    }
+
+    private void drawWin11Taskbar(Graphics2D g2) {
+        int y = H - WIN11_TASKBAR_H;
+
+        g2.setColor(new Color(243, 243, 243, 235));
+        g2.fillRect(0, y, W, WIN11_TASKBAR_H);
+
+        g2.setColor(new Color(225, 225, 225));
+        g2.fillRect(0, y, W, 1);
+
+        int totalIcons = 8;
+        int spacing = 38;
+        int clusterW = totalIcons * spacing;
+        int startX = (W - clusterW) / 2;
+        int iconY = y + (WIN11_TASKBAR_H - 24) / 2;
+
+        drawWin11StartIcon(g2, startX, iconY);
+        drawSearchIcon(g2, startX + spacing, iconY);
+        drawTaskViewIcon(g2, startX + spacing * 2, iconY);
+        drawWidgetsIcon(g2, startX + spacing * 3, iconY);
+        drawTeamsIcon(g2, startX + spacing * 4, iconY);
+        drawFileExplorerIcon(g2, startX + spacing * 5, iconY);
+        drawEdgeIcon(g2, startX + spacing * 6, iconY);
+        drawStoreIcon(g2, startX + spacing * 7, iconY);
+
+        g2.setColor(new Color(0, 103, 192));
+        g2.fill(new RoundRectangle2D.Double(startX + spacing * 5 + 4, y + WIN11_TASKBAR_H - 4, 16, 3, 2, 2));
+
+        drawWin11SystemTray(g2, y);
+    }
+
+    private void drawWin11StartIcon(Graphics2D g2, int x, int y) {
+        int s = 10;
+        g2.setColor(new Color(0, 120, 215));
+        g2.fill(new RoundRectangle2D.Double(x, y, s, s, 2, 2));
+        g2.fill(new RoundRectangle2D.Double(x + s + 2, y, s, s, 2, 2));
+        g2.fill(new RoundRectangle2D.Double(x, y + s + 2, s, s, 2, 2));
+        g2.fill(new RoundRectangle2D.Double(x + s + 2, y + s + 2, s, s, 2, 2));
+    }
+
+    private void drawSearchIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(80, 80, 80));
+        g2.setStroke(new BasicStroke(1.8f));
+        g2.drawOval(x + 2, y + 2, 13, 13);
+        g2.drawLine(x + 12, y + 12, x + 19, y + 19);
+        g2.setStroke(new BasicStroke(1f));
+    }
+
+    private void drawTaskViewIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(80, 80, 80));
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawRoundRect(x + 2, y + 4, 12, 16, 3, 3);
+        g2.setColor(new Color(140, 140, 140));
+        g2.drawRoundRect(x + 8, y + 2, 12, 16, 3, 3);
+        g2.setStroke(new BasicStroke(1f));
+    }
+
+    private void drawWidgetsIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(0, 120, 215));
+        g2.fillRoundRect(x + 2, y + 3, 9, 18, 3, 3);
+        g2.setColor(new Color(0, 164, 239));
+        g2.fillRoundRect(x + 13, y + 3, 9, 18, 3, 3);
+    }
+
+    private void drawTeamsIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(75, 70, 185));
+        g2.fillOval(x + 3, y + 3, 18, 18);
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        g2.drawString("T", x + 8, y + 16);
+    }
+
+    private void drawFileExplorerIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(245, 180, 35));
+        g2.fillRoundRect(x + 2, y + 5, 20, 14, 4, 4);
+        g2.setColor(new Color(0, 120, 215));
+        g2.fillRect(x + 5, y + 3, 8, 3);
+    }
+
+    private void drawEdgeIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(15, 140, 205));
+        g2.fillOval(x + 2, y + 2, 20, 20);
+        g2.setColor(new Color(40, 200, 175));
+        g2.fillOval(x + 6, y + 6, 12, 12);
+    }
+
+    private void drawStoreIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(0, 120, 215));
+        g2.fillRoundRect(x + 3, y + 6, 18, 15, 3, 3);
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawArc(x + 7, y + 2, 10, 8, 0, 180);
+        g2.setStroke(new BasicStroke(1f));
+    }
+
+    private void drawWin11SystemTray(Graphics2D g2, int taskbarY) {
+        int trayX = W - 145;
+        g2.setColor(new Color(60, 60, 60));
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+
+        g2.drawString("ENG", trayX, taskbarY + 20);
+        g2.drawString("DE", trayX + 2, taskbarY + 32);
+
+        int iconX = trayX + 30;
+        g2.setStroke(new BasicStroke(1.2f));
+        g2.drawArc(iconX, taskbarY + 16, 12, 12, 45, 90);
+        g2.drawArc(iconX + 2, taskbarY + 19, 8, 8, 45, 90);
+        g2.setStroke(new BasicStroke(1f));
+
+        String timeStr = LocalTime.now().format(DateTimeFormatter.ofPattern("12:11"));
+        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("15/10/2021"));
+
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        g2.drawString(timeStr, trayX + 55, taskbarY + 20);
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        g2.drawString(dateStr, trayX + 52, taskbarY + 34);
+
+        g2.setColor(new Color(0, 103, 192));
+        g2.fillOval(W - 22, taskbarY + 18, 12, 12);
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 9));
+        g2.drawString("3", W - 18, taskbarY + 27);
+    }
+
+    // ==========================================
+    // WINDOWS 7 MINECRAFT WINDOW
+    // ==========================================
+    private void drawWin7MinecraftWindow(Graphics2D g2, int x, int y, int w, int h) {
+        int titleH = 30;
+
+        g2.setColor(new Color(0, 0, 0, 80));
+        g2.fill(new RoundRectangle2D.Double(x + 6, y + 6, w, h, 14, 14));
+
+        g2.setColor(new Color(130, 185, 225, 170));
+        g2.fill(new RoundRectangle2D.Double(x, y, w, h, 12, 12));
+
+        GradientPaint glassGlow = new GradientPaint(x, y, new Color(255, 255, 255, 140), x, y + titleH, new Color(255, 255, 255, 30));
+        g2.setPaint(glassGlow);
+        g2.fill(new RoundRectangle2D.Double(x, y, w, titleH, 12, 12));
+
+        int border = 7;
+        int clientX = x + border;
+        int clientY = y + titleH;
+        int clientW = w - border * 2;
+        int clientH = h - titleH - border;
+
+        g2.setColor(new Color(15, 25, 40));
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        g2.drawString("Minecraft 1.2.5 - Singleplayer", x + 12, y + 20);
+
+        int bw = 26, bh = 18;
+        int cx = x + w - bw - 6, cy = y + 2;
+
+        g2.setPaint(new GradientPaint(cx, cy, new Color(230, 90, 80, 230), cx, cy + bh, new Color(180, 40, 30, 240)));
+        g2.fill(new RoundRectangle2D.Double(cx, cy, bw, bh, 4, 4));
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawLine(cx + 9, cy + 5, cx + bw - 9, cy + bh - 5);
+        g2.drawLine(cx + bw - 9, cy + 5, cx + 9, cy + bh - 5);
+
+        int mx = cx - bw - 2;
+        g2.setPaint(new GradientPaint(mx, cy, new Color(225, 240, 250, 160), mx, cy + bh, new Color(175, 200, 220, 190)));
+        g2.fill(new RoundRectangle2D.Double(mx, cy, bw, bh, 4, 4));
+        g2.setColor(new Color(40, 50, 65));
+        g2.drawRect(mx + 8, cy + 4, 9, 8);
+
+        int nx = mx - bw - 2;
+        g2.setPaint(new GradientPaint(nx, cy, new Color(225, 240, 250, 160), nx, cy + bh, new Color(175, 200, 220, 190)));
+        g2.fill(new RoundRectangle2D.Double(nx, cy, bw, bh, 4, 4));
+        g2.setColor(new Color(40, 50, 65));
+        g2.drawLine(nx + 8, cy + 11, nx + 16, cy + 11);
+        g2.setStroke(new BasicStroke(1f));
+
+        Shape oldClip = g2.getClip();
+        g2.setClip(new Rectangle2D.Double(clientX, clientY, clientW, clientH));
+        drawMinecraftScene(g2, clientX, clientY, clientW, clientH);
+        g2.setClip(oldClip);
+
+        g2.setColor(new Color(0, 0, 0, 150));
+        g2.drawRect(clientX - 1, clientY - 1, clientW + 1, clientH + 1);
+    }
+
+    private void drawMinecraftScene(Graphics2D g2, int cx, int cy, int cw, int ch) {
+        g2.setColor(new Color(10, 15, 30));
+        g2.fillRect(cx, cy, cw, ch);
+
+        g2.setColor(Color.WHITE);
+        g2.fillRect(cx + 30, cy + 20, 2, 2);
+        g2.fillRect(cx + 120, cy + 40, 2, 2);
+        g2.fillRect(cx + 250, cy + 15, 2, 2);
+        g2.fillRect(cx + 380, cy + 50, 2, 2);
+        g2.fillRect(cx + 90, cy + 70, 2, 2);
+
+        g2.setColor(new Color(240, 240, 220));
+        g2.fillRect(cx + cw - 60, cy + 20, 24, 24);
+
+        g2.setColor(new Color(35, 25, 20));
+        g2.fillPolygon(
+            new int[]{cx, cx + 130, cx + 180, cx},
+            new int[]{cy + 130, cy + 40, cy + 150, cy + 150}, 4
+        );
+
+        int hx = cx + cw - 120, hy = cy + 40;
+        g2.setColor(new Color(110, 75, 35)); 
+        g2.fillRect(hx, hy, 90, 70);
+        g2.setColor(new Color(70, 50, 25)); 
+        g2.fillRect(hx, hy, 10, 70);
+        g2.fillRect(hx + 80, hy, 10, 70);
+        g2.fillRect(hx, hy, 90, 8);
+        g2.setColor(new Color(160, 210, 230, 180)); 
+        g2.fillRect(hx + 35, hy + 25, 20, 20);
+        g2.setColor(new Color(50, 35, 20));
+        g2.drawRect(hx + 35, hy + 25, 20, 20);
+
+        g2.setColor(new Color(90, 90, 90));
+        g2.fillRect(hx - 10, hy - 12, 110, 14);
+
+        int fx = cx + cw / 2 + 25, fy = cy + 105;
+        g2.setColor(new Color(30, 90, 210, 210));
+        g2.fillRect(fx, fy, 42, 38);
+        g2.setColor(new Color(80, 140, 240, 180));
+        g2.fillRect(fx + 6, fy + 4, 30, 30);
+
+        g2.setColor(new Color(210, 195, 140));
+        g2.fillRect(cx, cy + 140, cw, ch - 140);
+
+        g2.setColor(new Color(190, 175, 120));
+        for (int i = 0; i < cw; i += 24) {
+            g2.drawLine(cx + i, cy + 140, cx + i - 40, cy + ch);
+        }
+        for (int j = 140; j < ch; j += 20) {
+            g2.drawLine(cx, cy + j, cx + cw, cy + j);
+        }
+
+        g2.setColor(new Color(140, 140, 140));
+        g2.fillPolygon(
+            new int[]{cx, cx + 150, cx + 110, cx},
+            new int[]{cy + 170, cy + 190, cy + ch, cy + ch}, 4
+        );
+        g2.setColor(new Color(110, 110, 110));
+        g2.drawPolygon(
+            new int[]{cx, cx + 150, cx + 110, cx},
+            new int[]{cy + 170, cy + 190, cy + ch, cy + ch}, 4
+        );
+
+        boolean isFlashing = ((int)(totalTime * 8) % 2 == 0);
+        int crx = cx + cw / 2 - 22;
+        int cry = cy + 95;
+
+        g2.setColor(new Color(0, 0, 0, 70));
+        g2.fillOval(crx - 6, cry + 80, 52, 16);
+
+        g2.setColor(isFlashing ? new Color(220, 255, 220) : new Color(75, 170, 60));
+        g2.fillRect(crx, cry, 40, 40);
+
+        g2.setColor(isFlashing ? new Color(150, 180, 150) : Color.BLACK);
+        g2.fillRect(crx + 6, cry + 10, 9, 9);
+        g2.fillRect(crx + 25, cry + 10, 9, 9);
+        g2.fillRect(crx + 15, cry + 19, 10, 14); 
+        g2.fillRect(crx + 11, cry + 24, 18, 12); 
+        g2.fillRect(crx + 11, cry + 32, 5, 5);  
+        g2.fillRect(crx + 24, cry + 32, 5, 5);  
+
+        g2.setColor(isFlashing ? new Color(200, 245, 200) : new Color(65, 155, 50));
+        g2.fillRect(crx + 6, cry + 40, 28, 36);
+
+        double legAnim = Math.sin(totalTime * 12) * 4;
+        g2.setColor(isFlashing ? new Color(180, 230, 180) : new Color(50, 130, 40));
+        g2.fillRect(crx + 3, cry + 72 + (int)legAnim, 14, 16);  
+        g2.fillRect(crx + 23, cry + 72 - (int)legAnim, 14, 16); 
+
+        if (isFlashing) {
+            g2.setColor(new Color(255, 255, 255, 160));
+            g2.setStroke(new BasicStroke(3f));
+            g2.drawRect(crx - 2, cry - 2, 44, 44);
+            g2.drawRect(crx + 4, cry + 38, 32, 52);
+            g2.setStroke(new BasicStroke(1f));
+        }
+
+        int midX = cx + cw / 2;
+        int midY = cy + ch / 2;
+        g2.setColor(new Color(255, 255, 255, 200));
+        g2.fillRect(midX - 6, midY - 1, 13, 3);
+        g2.fillRect(midX - 1, midY - 6, 3, 13);
+
+        int swX = cx + cw - 110;
+        int swY = cy + ch - 120;
+        Path2D.Double blade = new Path2D.Double();
+        blade.moveTo(swX + 70, swY + 110);
+        blade.lineTo(swX + 10, swY + 20);
+        blade.lineTo(swX + 25, swY + 10);
+        blade.lineTo(swX + 85, swY + 95);
+        blade.closePath();
+        g2.setColor(new Color(200, 215, 220));
+        g2.fill(blade);
+        g2.setColor(Color.BLACK);
+        g2.draw(blade);
+
+        g2.setColor(new Color(90, 60, 30));
+        g2.fillRect(swX + 65, swY + 95, 25, 8);
+
+        int hudX = cx + cw / 2 - 90;
+        int hudY = cy + ch - 24;
+
+        g2.setColor(new Color(220, 20, 20));
+        for (int i = 0; i < 10; i++) {
+            g2.fillRect(hudX + (i * 8), hudY - 16, 6, 6);
+        }
+
+        g2.setColor(new Color(180, 110, 40));
+        for (int i = 0; i < 10; i++) {
+            g2.fillRect(hudX + 100 + (i * 8), hudY - 16, 6, 6);
+        }
+
+        g2.setColor(new Color(90, 215, 50));
+        g2.fillRect(hudX, hudY - 6, 180, 3);
+        g2.setColor(new Color(40, 40, 40));
+        g2.drawRect(hudX - 1, hudY - 7, 182, 5);
+
+        g2.setColor(new Color(140, 140, 140, 210));
+        g2.fillRect(hudX, hudY, 180, 20);
+        g2.setColor(Color.BLACK);
+        g2.drawRect(hudX, hudY, 180, 20);
+
+        for (int i = 0; i < 9; i++) {
+            g2.drawRect(hudX + (i * 20), hudY, 20, 20);
+        }
+
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(2f));
+        g2.drawRect(hudX + 20 - 1, hudY - 1, 22, 22);
+        g2.setStroke(new BasicStroke(1f));
+
+        g2.setColor(new Color(160, 160, 160));
+        g2.fillRect(hudX + 6, hudY + 4, 8, 12);
+        g2.setColor(new Color(180, 220, 240)); 
+        g2.fillRect(hudX + 26, hudY + 4, 8, 12);
+        g2.setColor(new Color(160, 160, 160)); 
+        g2.fillRect(hudX + 46, hudY + 4, 8, 12);
+        g2.setColor(new Color(230, 210, 140)); 
+        g2.fillRect(hudX + 126, hudY + 6, 10, 8);
+        g2.setColor(new Color(255, 200, 50));  
+        g2.fillRect(hudX + 148, hudY + 4, 4, 12);
+    }
+
+    // ==========================================
+    // WINDOWS XP EXPLOSION & DEBUG UTILS
+    // ==========================================
     private void drawRetroExplosion(Graphics2D g2, int cx, int cy, double progress) {
         int maxRadius = (int)(progress * 650);
         
@@ -296,9 +734,6 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
     }
 
     private void drawWin7CenterLogo(Graphics2D g2, int cx, int cy) {
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-
         Path2D.Double redPane = new Path2D.Double();
         redPane.moveTo(cx - 100, cy - 95);
         redPane.curveTo(cx - 65, cy - 110, cx - 35, cy - 108, cx - 7, cy - 93);
@@ -310,7 +745,6 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
                                     cx - 7, cy - 7, new Color(210, 45, 25, 225)));
         g2.fill(redPane);
 
-        // 2. Top-Right Pane (Green)
         Path2D.Double greenPane = new Path2D.Double();
         greenPane.moveTo(cx + 7, cy - 93);
         greenPane.curveTo(cx + 35, cy - 78, cx + 65, cy - 80, cx + 100, cy - 98);
@@ -322,7 +756,6 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
                                     cx + 100, cy - 14, new Color(75, 175, 30, 225)));
         g2.fill(greenPane);
 
-        // 3. Bottom-Left Pane (Blue)
         Path2D.Double bluePane = new Path2D.Double();
         bluePane.moveTo(cx - 100, cy + 9);
         bluePane.curveTo(cx - 65, cy - 6, cx - 35, cy - 4, cx - 7, cy + 7);
@@ -334,7 +767,6 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
                                     cx - 7, cy + 93, new Color(15, 100, 210, 225)));
         g2.fill(bluePane);
 
-        // 4. Bottom-Right Pane (Yellow / Gold)
         Path2D.Double yellowPane = new Path2D.Double();
         yellowPane.moveTo(cx + 7, cy + 7);
         yellowPane.curveTo(cx + 35, cy + 20, cx + 65, cy + 18, cx + 100, cy + 0);
@@ -427,65 +859,6 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
         g2.setColor(Color.BLACK);
         g2.setFont(new Font("Tahoma", Font.PLAIN, 12));
         g2.drawString("Insert your own memory here...", x + 16, y + titleH + 30);
-    }
-
-    private void drawWin7Window(Graphics2D g2, int x, int y, int w, int h) {
-        int titleH = 32;
-
-        g2.setColor(new Color(0, 0, 0, 70));
-        g2.fill(new RoundRectangle2D.Double(x + 5, y + 5, w, h, 14, 14));
-
-        g2.setColor(new Color(160, 205, 235, 150));
-        g2.fill(new RoundRectangle2D.Double(x, y, w, h, 12, 12));
-
-        GradientPaint glassGlow = new GradientPaint(x, y, new Color(255, 255, 255, 130), x, y + titleH, new Color(255, 255, 255, 20));
-        g2.setPaint(glassGlow);
-        g2.fill(new RoundRectangle2D.Double(x, y, w, titleH, 12, 12));
-
-        int border = 7;
-        int clientX = x + border;
-        int clientY = y + titleH;
-        int clientW = w - border * 2;
-        int clientH = h - titleH - border;
-
-        g2.setColor(new Color(252, 252, 252));
-        g2.fillRect(clientX, clientY, clientW, clientH);
-        g2.setColor(new Color(170, 195, 215));
-        g2.drawRect(clientX, clientY, clientW, clientH);
-
-        g2.setColor(new Color(255, 255, 255, 180));
-        g2.draw(new RoundRectangle2D.Double(x + 1, y + 1, w - 2, h - 2, 10, 10));
-
-        g2.setColor(new Color(15, 25, 40));
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        g2.drawString("Windows 7 - Aero Glass", x + 14, y + 21);
-
-        int bw = 28, bh = 18;
-        int cx = x + w - bw - 6, cy = y + 1;
-
-        g2.setPaint(new GradientPaint(cx, cy, new Color(230, 90, 80, 230), cx, cy + bh, new Color(180, 40, 30, 240)));
-        g2.fill(new RoundRectangle2D.Double(cx, cy, bw, bh, 4, 4));
-        g2.setColor(Color.WHITE);
-        g2.setStroke(new BasicStroke(1.5f));
-        g2.drawLine(cx + 10, cy + 5, cx + bw - 10, cy + bh - 5);
-        g2.drawLine(cx + bw - 10, cy + 5, cx + 10, cy + bh - 5);
-
-        int mx = cx - bw - 2;
-        g2.setPaint(new GradientPaint(mx, cy, new Color(225, 240, 250, 160), mx, cy + bh, new Color(175, 200, 220, 190)));
-        g2.fill(new RoundRectangle2D.Double(mx, cy, bw, bh, 4, 4));
-        g2.setColor(new Color(40, 50, 65));
-        g2.drawRect(mx + 9, cy + 4, 9, 8);
-
-        int nx = mx - bw - 2;
-        g2.setPaint(new GradientPaint(nx, cy, new Color(225, 240, 250, 160), nx, cy + bh, new Color(175, 200, 220, 190)));
-        g2.fill(new RoundRectangle2D.Double(nx, cy, bw, bh, 4, 4));
-        g2.setColor(new Color(40, 50, 65));
-        g2.drawLine(nx + 9, cy + 11, nx + 17, cy + 11);
-
-        g2.setStroke(new BasicStroke(1f));
-        g2.setColor(new Color(40, 40, 40));
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        g2.drawString("Windows 7 Aero Glass visual style loaded.", clientX + 16, clientY + 30);
     }
 
     private void drawMinesweeperWindow(Graphics2D g2, int x, int y, int w, int h) {
@@ -759,20 +1132,32 @@ public class WindowsTransitionDemo extends JPanel implements Runnable {
         int s = ICON_SIZE / 2;
         int arc = 12;
 
-        g2.setColor(new Color(0, 0, 0, 50));
-        g2.fill(new RoundRectangle2D.Double(x + 3, y + 3, ICON_SIZE, ICON_SIZE, arc, arc));
+        if (totalTime >= 13.0) { // Windows 11 icon rendering
+            g2.setColor(new Color(0, 0, 0, 30));
+            g2.fill(new RoundRectangle2D.Double(x + 2, y + 4, ICON_SIZE, ICON_SIZE, 12, 12));
+    
+            Color winBlue = new Color(0, 120, 215);
+            g2.setColor(winBlue);
+            g2.fill(new RoundRectangle2D.Double(x, y, s - 1, s - 1, 4, 4));
+            g2.fill(new RoundRectangle2D.Double(x + s + 1, y, s - 1, s - 1, 4, 4));
+            g2.fill(new RoundRectangle2D.Double(x, y + s + 1, s - 1, s - 1, 4, 4));
+            g2.fill(new RoundRectangle2D.Double(x + s + 1, y + s + 1, s - 1, s - 1, 4, 4));
+        } else { // Classic icon rendering
+            g2.setColor(new Color(0, 0, 0, 50));
+            g2.fill(new RoundRectangle2D.Double(x + 3, y + 3, ICON_SIZE, ICON_SIZE, arc, arc));
 
-        g2.setPaint(new GradientPaint((float)x, (float)y, new Color(250, 95, 65), (float)x, (float)(y + s), new Color(215, 45, 25)));
-        g2.fill(new RoundRectangle2D.Double(x, y, s, s, arc, arc));
-        g2.setPaint(new GradientPaint((float)(x + s), (float)y, new Color(135, 215, 65), (float)(x + s), (float)(y + s), new Color(75, 165, 35)));
-        g2.fill(new RoundRectangle2D.Double(x + s, y, s, s, arc, arc));
-        g2.setPaint(new GradientPaint((float)x, (float)(y + s), new Color(40, 155, 245), (float)x, (float)(y + ICON_SIZE), new Color(15, 95, 205)));
-        g2.fill(new RoundRectangle2D.Double(x, y + s, s, s, arc, arc));
-        g2.setPaint(new GradientPaint((float)(x + s), (float)(y + s), new Color(255, 210, 45), (float)(x + s), (float)(y + ICON_SIZE), new Color(235, 165, 15)));
-        g2.fill(new RoundRectangle2D.Double(x + s, y + s, s, s, arc, arc));
+            g2.setPaint(new GradientPaint((float)x, (float)y, new Color(250, 95, 65), (float)x, (float)(y + s), new Color(215, 45, 25)));
+            g2.fill(new RoundRectangle2D.Double(x, y, s, s, arc, arc));
+            g2.setPaint(new GradientPaint((float)(x + s), (float)y, new Color(135, 215, 65), (float)(x + s), (float)(y + s), new Color(75, 165, 35)));
+            g2.fill(new RoundRectangle2D.Double(x + s, y, s, s, arc, arc));
+            g2.setPaint(new GradientPaint((float)x, (float)(y + s), new Color(40, 155, 245), (float)x, (float)(y + ICON_SIZE), new Color(15, 95, 205)));
+            g2.fill(new RoundRectangle2D.Double(x, y + s, s, s, arc, arc));
+            g2.setPaint(new GradientPaint((float)(x + s), (float)(y + s), new Color(255, 210, 45), (float)(x + s), (float)(y + ICON_SIZE), new Color(235, 165, 15)));
+            g2.fill(new RoundRectangle2D.Double(x + s, y + s, s, s, arc, arc));
 
-        g2.setPaint(new GradientPaint((float)x, (float)y, new Color(255, 255, 255, 130), (float)x, (float)(y + ICON_SIZE / 2), new Color(255, 255, 255, 0)));
-        g2.fill(new RoundRectangle2D.Double(x, y, ICON_SIZE, ICON_SIZE / 2.0, arc, arc));
+            g2.setPaint(new GradientPaint((float)x, (float)y, new Color(255, 255, 255, 130), (float)x, (float)(y + ICON_SIZE / 2), new Color(255, 255, 255, 0)));
+            g2.fill(new RoundRectangle2D.Double(x, y, ICON_SIZE, ICON_SIZE / 2.0, arc, arc));
+        }
     }
 
     private void drawXPTaskbar(Graphics2D g2) {
