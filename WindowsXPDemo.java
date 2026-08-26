@@ -19,12 +19,15 @@ public class WindowsXPDemo extends JPanel implements Runnable {
 
     public static void main(String[] args) {
         WindowsXPDemo m = new WindowsXPDemo();
+        m.setPreferredSize(new Dimension(W, H));
+
         JFrame f = new JFrame();
         f.add(m);
-        f.setTitle("Windows XP - My Memories");
-        f.setSize(W, H);
+        f.setTitle("Windows XP");
         f.setResizable(false);
+        f.pack();
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        f.setLocationRelativeTo(null);
         f.setVisible(true);
         (new Thread(m)).start();
     }

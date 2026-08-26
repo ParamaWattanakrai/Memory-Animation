@@ -19,12 +19,15 @@ public class Windows7Demo extends JPanel implements Runnable {
 
     public static void main(String[] args) {
         Windows7Demo m = new Windows7Demo();
+        m.setPreferredSize(new Dimension(W, H));
+
         JFrame f = new JFrame();
         f.add(m);
-        f.setTitle("Windows 7 - Aero Edition");
-        f.setSize(W, H);
+        f.setTitle("Windows 7");
         f.setResizable(false);
+        f.pack();
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        f.setLocationRelativeTo(null);
         f.setVisible(true);
         (new Thread(m)).start();
     }
