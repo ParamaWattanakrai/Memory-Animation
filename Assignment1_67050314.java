@@ -45,7 +45,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private static final int TRANSITION_2_X = 298;
     private static final int TRANSITION_2_Y = 205;
 
-    // Sahur center position for transition origin
+    // Sahur center position
     private static final int SAHUR_X = 140;
     private static final int SAHUR_Y = 470;
 
@@ -127,8 +127,8 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         } else if (totalTime < BLACK_TO_XP_START) {
             drawBlackScene(g2);
         } else {
-            // Circular transition expanding out from Sahur to empty Windows XP
-            drawTransitionNoExplosion(g2, BLACK_TO_XP_START, SAHUR_X, SAHUR_Y, 
+            // Circular transition expanding out from screen center to empty Windows XP
+            drawTransitionNoExplosion(g2, BLACK_TO_XP_START, W / 2, H / 2, 
                     () -> drawBlackScene(g2), () -> drawXPScene(g2, false));
         }
 
@@ -1004,7 +1004,8 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             new int[]{cy + 130, cy + 40, cy + 150, cy + 150}, 4
         );
 
-        int hx = cx + cw - 120, hy = cy + 40;
+        // Lowered house to sit on the sand ground (hy = cy + 70)
+        int hx = cx + cw - 120, hy = cy + 70;
         g2.setColor(new Color(110, 75, 35)); 
         g2.fillRect(hx, hy, 90, 70);
         g2.setColor(new Color(70, 50, 25)); 
@@ -1018,12 +1019,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
 
         g2.setColor(new Color(90, 90, 90));
         g2.fillRect(hx - 10, hy - 12, 110, 14);
-
-        int fx = cx + cw / 2 + 25, fy = cy + 105;
-        g2.setColor(new Color(30, 90, 210, 210));
-        g2.fillRect(fx, fy, 42, 38);
-        g2.setColor(new Color(80, 140, 240, 180));
-        g2.fillRect(fx + 6, fy + 4, 30, 30);
 
         g2.setColor(new Color(210, 195, 140));
         g2.fillRect(cx, cy + 140, cw, ch - 140);
@@ -1100,8 +1095,9 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setColor(Color.BLACK);
         g2.draw(blade);
 
+        // Enlarged brown sword hilt/crossguard
         g2.setColor(new Color(90, 60, 30));
-        g2.fillRect(swX + 65, swY + 95, 25, 8);
+        g2.fillRect(swX + 55, swY + 90, 35, 16);
 
         int hudX = cx + cw / 2 - 90;
         int hudY = cy + ch - 24;
