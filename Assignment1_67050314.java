@@ -8,7 +8,7 @@ import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 
 /**
- * Animates a "Windows XP -> Windows 7 -> Windows 11 -> Black Screen" sequence.
+ * Animates a "Windows XP -> Windows 7 -> Windows 11 -> Black Screen (Sahur) -> Windows XP" looping sequence.
  */
 public class Assignment1_67050314 extends JPanel implements Runnable {
 
@@ -25,7 +25,9 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private static final double WIN7_TO_WIN11_START = WIN7_START + 4.0;    // 11.0s
     private static final double WIN11_START = WIN7_TO_WIN11_START + TRANSITION_DURATION; // 13.0s
     private static final double WIN11_TO_BLACK_START = WIN11_START + 1.5; // Shortened Win 11 duration to 1.5s
-    private static final double BLACK_START = WIN11_TO_BLACK_START + TRANSITION_DURATION;
+    private static final double BLACK_START = WIN11_TO_BLACK_START + TRANSITION_DURATION; // 16.5s
+    private static final double BLACK_TO_XP_START = BLACK_START + 3.0; // Display Sahur for 3 seconds (19.5s)
+    private static final double LOOP_DURATION = BLACK_TO_XP_START + TRANSITION_DURATION; // Full loop duration (21.5s)
 
     private static final double MINECRAFT_WINDOW_APPEAR_AT = WIN7_START;
 
@@ -40,6 +42,10 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
 
     private static final int TRANSITION_2_X = 298;
     private static final int TRANSITION_2_Y = 205;
+
+    // Sahur center position for transition origin
+    private static final int SAHUR_X = 140;
+    private static final int SAHUR_Y = 470;
 
     double totalTime = 0;
     int mouseX = 0, mouseY = 0;
@@ -75,6 +81,12 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         while (!Thread.currentThread().isInterrupted()) {
             long nowMs = System.currentTimeMillis();
             totalTime += (nowMs - lastTimeMs) / 1000.0;
+            
+            // Loop totalTime continuously
+            if (totalTime >= LOOP_DURATION) {
+                totalTime %= LOOP_DURATION;
+            }
+            
             lastTimeMs = nowMs;
 
             repaint();
@@ -96,10 +108,10 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         if (totalTime < XP_END) {
-            drawXPScene(g2);
+            drawXPScene(g2, true);
         } else if (totalTime < WIN7_START) {
             Point origin = minesweeperExplosionOrigin();
-            drawTransition(g2, XP_END, origin.x, origin.y, () -> drawXPScene(g2), () -> drawWin7Scene(g2));
+            drawTransition(g2, XP_END, origin.x, origin.y, () -> drawXPScene(g2, true), () -> drawWin7Scene(g2));
         } else if (totalTime < WIN7_TO_WIN11_START) {
             drawWin7Scene(g2);
         } else if (totalTime < WIN11_START) {
@@ -110,8 +122,12 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         } else if (totalTime < BLACK_START) {
             drawTransitionNoExplosion(g2, WIN11_TO_BLACK_START, W / 2, H / 2, 
                     () -> drawWin11Scene(g2), () -> drawBlackScene(g2));
-        } else {
+        } else if (totalTime < BLACK_TO_XP_START) {
             drawBlackScene(g2);
+        } else {
+            // Circular transition expanding out from Sahur to empty Windows XP
+            drawTransitionNoExplosion(g2, BLACK_TO_XP_START, SAHUR_X, SAHUR_Y, 
+                    () -> drawBlackScene(g2), () -> drawXPScene(g2, false));
         }
 
         drawDebugInfo(g2);
@@ -152,72 +168,116 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setColor(Color.BLACK);
         g2.fillRect(0, 0, W, H);
         
-        drawSahur(g2, W / 2, H / 2 - 20);
+        // Positioned Sahur to the left, lower bottom, and scaled larger (1.25x)
+        double scale = 1.25;
+
+        drawSahur(g2, SAHUR_X, SAHUR_Y, scale);
+        
+        // Dialog box appearing next to Sahur
+        drawDialogBox(g2, 210, 110, 340, 130, "You brought me into the world\nagainst my will.\nAnd for doing my job,\nyou call me a monster?");
     }
 
-    private void drawSahur(Graphics2D g2, int cx, int cy) {
+    private void drawDialogBox(Graphics2D g2, int x, int y, int w, int h, String text) {
+        // Dialog shadow
+        g2.setColor(new Color(0, 0, 0, 120));
+        g2.fillRoundRect(x + 5, y + 5, w, h, 20, 20);
+
+        Polygon tailShadow = new Polygon();
+        tailShadow.addPoint(x + 5, y + h - 25);
+        tailShadow.addPoint(x - 25, y + h - 5);
+        tailShadow.addPoint(x + 25, y + h - 5);
+        g2.fillPolygon(tailShadow);
+
+        // Pure white speech bubble fill
+        g2.setColor(Color.WHITE);
+        g2.fillRoundRect(x, y, w, h, 20, 20);
+
+        Polygon tail = new Polygon();
+        tail.addPoint(x, y + h - 30);
+        tail.addPoint(x - 30, y + h - 10);
+        tail.addPoint(x + 20, y + h - 2);
+        g2.fillPolygon(tail);
+
+        // Text formatting
+        g2.setColor(Color.BLACK);
+        g2.setFont(new Font("SansSerif", Font.BOLD, 17));
+        FontMetrics fm = g2.getFontMetrics();
+
+        String[] lines = text.split("\n");
+        int lineHeight = fm.getHeight();
+        int totalTextHeight = lines.length * lineHeight;
+        int startY = y + (h - totalTextHeight) / 2 + fm.getAscent();
+
+        for (int i = 0; i < lines.length; i++) {
+            int textWidth = fm.stringWidth(lines[i]);
+            int startX = x + (w - textWidth) / 2;
+            g2.drawString(lines[i], startX, startY + (i * lineHeight));
+        }
+    }
+
+    private void drawSahur(Graphics2D g2, int cx, int cy, double scale) {
         Color cBase = new Color(175, 107, 50);
         Color cShadow = new Color(110, 50, 10);
         Color cHighlight = new Color(215, 155, 95);
         Color cDark = new Color(50, 20, 5);
         Color cEye = new Color(230, 215, 185);
         
-        drawPolyRel(g2, cShadow, cx, cy, new int[]{-32, -22, -100, -125}, new int[]{65, 60, 210, 220});
-        drawPolyRel(g2, cHighlight, cx, cy, new int[]{-29, -25, -105, -115}, new int[]{65, 63, 210, 215}); 
-        drawPolyRel(g2, cShadow, cx, cy, new int[]{-135, -105, -115, -145}, new int[]{200, 205, 235, 225}); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{-32, -22, -100, -125}, new int[]{65, 60, 210, 220}, scale);
+        drawPolyRel(g2, cHighlight, cx, cy, new int[]{-29, -25, -105, -115}, new int[]{65, 63, 210, 215}, scale); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{-135, -105, -115, -145}, new int[]{200, 205, 235, 225}, scale); 
         
-        drawPolyRel(g2, cShadow, cx, cy, new int[]{-15, -5, -10, -20}, new int[]{90, 90, 175, 175}); 
-        drawPolyRel(g2, cBase, cx, cy, new int[]{-23, -7, -9, -25}, new int[]{170, 172, 185, 183}); 
-        drawPolyRel(g2, cShadow, cx, cy, new int[]{-22, -12, -18, -30}, new int[]{180, 180, 255, 255}); 
-        drawPolyRel(g2, cBase, cx, cy, new int[]{-55, -10, -15, -60}, new int[]{250, 250, 265, 265}); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{-15, -5, -10, -20}, new int[]{90, 90, 175, 175}, scale); 
+        drawPolyRel(g2, cBase, cx, cy, new int[]{-23, -7, -9, -25}, new int[]{170, 172, 185, 183}, scale); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{-22, -12, -18, -30}, new int[]{180, 180, 255, 255}, scale); 
+        drawPolyRel(g2, cBase, cx, cy, new int[]{-55, -10, -15, -60}, new int[]{250, 250, 265, 265}, scale); 
         
-        drawPolyRel(g2, cShadow, cx, cy, new int[]{25, 35, 38, 28}, new int[]{90, 90, 170, 170}); 
-        drawPolyRel(g2, cBase, cx, cy, new int[]{24, 40, 42, 26}, new int[]{167, 169, 182, 180}); 
-        drawPolyRel(g2, cShadow, cx, cy, new int[]{28, 38, 42, 32}, new int[]{178, 178, 255, 255}); 
-        drawPolyRel(g2, cBase, cx, cy, new int[]{15, 50, 55, 10}, new int[]{250, 250, 265, 265}); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{25, 35, 38, 28}, new int[]{90, 90, 170, 170}, scale); 
+        drawPolyRel(g2, cBase, cx, cy, new int[]{24, 40, 42, 26}, new int[]{167, 169, 182, 180}, scale); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{28, 38, 42, 32}, new int[]{178, 178, 255, 255}, scale); 
+        drawPolyRel(g2, cBase, cx, cy, new int[]{15, 50, 55, 10}, new int[]{250, 250, 265, 265}, scale); 
 
         drawPolyRel(g2, cBase, cx, cy, 
             new int[]{-15, 10, 35, 45, 50, 48, 30, -10, -25, -35, -45, -55, -50, -30}, 
-            new int[]{-205, -210, -200, -150, -50, 80, 100, 105, 90, 20, -80, -120, -160, -190});
+            new int[]{-205, -210, -200, -150, -50, 80, 100, 105, 90, 20, -80, -120, -160, -190}, scale);
             
         drawPolyRel(g2, cShadow, cx, cy, 
             new int[]{-15, 0, -10, -20, -25, -35, -45, -55, -50, -30},
-            new int[]{-205, -190, -50, 80, 90, 20, -80, -120, -160, -190});
+            new int[]{-205, -190, -50, 80, 90, 20, -80, -120, -160, -190}, scale);
             
         drawPolyRel(g2, cHighlight, cx, cy, 
             new int[]{35, 45, 50, 48, 30, 20, 25},
-            new int[]{-200, -150, -50, 80, 100, 30, -100});
+            new int[]{-200, -150, -50, 80, 100, 30, -100}, scale);
 
-        drawPolyRel(g2, cDark, cx, cy, new int[]{-50, -30, -15, -25, -45, -55}, new int[]{-170, -180, -155, -130, -135, -150});
-        drawPolyRel(g2, cEye, cx, cy, new int[]{-45, -32, -20, -28, -42, -50}, new int[]{-165, -172, -155, -138, -140, -150});
-        drawPolyRel(g2, cDark, cx, cy, new int[]{-35, -25, -22, -28, -38}, new int[]{-160, -165, -150, -142, -152});
-        drawPolyRel(g2, Color.WHITE, cx, cy, new int[]{-30, -25, -26, -31}, new int[]{-155, -158, -152, -150}); 
+        drawPolyRel(g2, cDark, cx, cy, new int[]{-50, -30, -15, -25, -45, -55}, new int[]{-170, -180, -155, -130, -135, -150}, scale);
+        drawPolyRel(g2, cEye, cx, cy, new int[]{-45, -32, -20, -28, -42, -50}, new int[]{-165, -172, -155, -138, -140, -150}, scale);
+        drawPolyRel(g2, cDark, cx, cy, new int[]{-35, -25, -22, -28, -38}, new int[]{-160, -165, -150, -142, -152}, scale);
+        drawPolyRel(g2, Color.WHITE, cx, cy, new int[]{-30, -25, -26, -31}, new int[]{-155, -158, -152, -150}, scale); 
         
-        drawPolyRel(g2, cDark, cx, cy, new int[]{5, 25, 40, 35, 15, 0}, new int[]{-185, -190, -165, -140, -135, -160});
-        drawPolyRel(g2, cEye, cx, cy, new int[]{10, 25, 35, 30, 15, 5}, new int[]{-180, -185, -165, -145, -140, -160});
-        drawPolyRel(g2, cDark, cx, cy, new int[]{20, 30, 33, 25, 17}, new int[]{-172, -175, -162, -158, -162});
-        drawPolyRel(g2, Color.WHITE, cx, cy, new int[]{23, 27, 26, 22}, new int[]{-168, -170, -165, -163}); 
+        drawPolyRel(g2, cDark, cx, cy, new int[]{5, 25, 40, 35, 15, 0}, new int[]{-185, -190, -165, -140, -135, -160}, scale);
+        drawPolyRel(g2, cEye, cx, cy, new int[]{10, 25, 35, 30, 15, 5}, new int[]{-180, -185, -165, -145, -140, -160}, scale);
+        drawPolyRel(g2, cDark, cx, cy, new int[]{20, 30, 33, 25, 17}, new int[]{-172, -175, -162, -158, -162}, scale);
+        drawPolyRel(g2, Color.WHITE, cx, cy, new int[]{23, 27, 26, 22}, new int[]{-168, -170, -165, -163}, scale); 
         
-        drawPolyRel(g2, cHighlight, cx, cy, new int[]{-10, -25, 0}, new int[]{-140, -115, -120}); 
-        drawPolyRel(g2, cShadow, cx, cy, new int[]{0, -25, 10}, new int[]{-120, -115, -110}); 
+        drawPolyRel(g2, cHighlight, cx, cy, new int[]{-10, -25, 0}, new int[]{-140, -115, -120}, scale); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{0, -25, 10}, new int[]{-120, -115, -110}, scale); 
         
-        drawPolyRel(g2, cDark, cx, cy, new int[]{-30, -10, 15, 25, 20, 0, -25}, new int[]{-105, -95, -100, -115, -120, -102, -110});
+        drawPolyRel(g2, cDark, cx, cy, new int[]{-30, -10, 15, 25, 20, 0, -25}, new int[]{-105, -95, -100, -115, -120, -102, -110}, scale);
 
-        drawPolyRel(g2, cBase, cx, cy, new int[]{-30, -20, -35, -45}, new int[]{-30, -30, 25, 25}); 
-        drawPolyRel(g2, cShadow, cx, cy, new int[]{-45, -35, -25, -35}, new int[]{25, 25, 60, 60}); 
-        drawPolyRel(g2, cDark, cx, cy, new int[]{-40, -20, -25, -45}, new int[]{55, 55, 70, 70}); 
+        drawPolyRel(g2, cBase, cx, cy, new int[]{-30, -20, -35, -45}, new int[]{-30, -30, 25, 25}, scale); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{-45, -35, -25, -35}, new int[]{25, 25, 60, 60}, scale); 
+        drawPolyRel(g2, cDark, cx, cy, new int[]{-40, -20, -25, -45}, new int[]{55, 55, 70, 70}, scale); 
         
-        drawPolyRel(g2, cShadow, cx, cy, new int[]{45, 55, 62, 52}, new int[]{-30, -30, 25, 25}); 
-        drawPolyRel(g2, cShadow, cx, cy, new int[]{52, 62, 55, 45}, new int[]{25, 25, 70, 70}); 
-        drawPolyRel(g2, cBase, cx, cy, new int[]{42, 58, 55, 40}, new int[]{65, 65, 80, 80}); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{45, 55, 62, 52}, new int[]{-30, -30, 25, 25}, scale); 
+        drawPolyRel(g2, cShadow, cx, cy, new int[]{52, 62, 55, 45}, new int[]{25, 25, 70, 70}, scale); 
+        drawPolyRel(g2, cBase, cx, cy, new int[]{42, 58, 55, 40}, new int[]{65, 65, 80, 80}, scale); 
     }
 
-    private void drawPolyRel(Graphics2D g2, Color c, int cx, int cy, int[] x, int[] y) {
+    private void drawPolyRel(Graphics2D g2, Color c, int cx, int cy, int[] x, int[] y, double scale) {
         int[] nx = new int[x.length];
         int[] ny = new int[y.length];
         for(int i = 0; i < x.length; i++) {
-            nx[i] = cx + x[i];
-            ny[i] = cy + y[i];
+            nx[i] = cx + (int)(x[i] * scale);
+            ny[i] = cy + (int)(y[i] * scale);
         }
         g2.setColor(c);
         g2.fillPolygon(nx, ny, x.length);
@@ -331,27 +391,26 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.drawLine(cx - y, cy - x, cx + y, cy - x);
     }
 
-    private void drawXPScene(Graphics2D g2) {
+    private void drawXPScene(Graphics2D g2, boolean allowWindows) {
         drawXPDesktop(g2);
         
-        // 1. First text window appears after breathing room
-        if (totalTime >= 0.5) {
-            drawWindow(g2, MEMORIES_WINDOW_1.x, MEMORIES_WINDOW_1.y, 
-                       MEMORIES_WINDOW_1.width, MEMORIES_WINDOW_1.height, 
-                       "Notes.txt", "'Don't play for too long' –Mother");
-        }
+        if (allowWindows) {
+            if (totalTime >= 0.5) {
+                drawWindow(g2, MEMORIES_WINDOW_1.x, MEMORIES_WINDOW_1.y, 
+                           MEMORIES_WINDOW_1.width, MEMORIES_WINDOW_1.height, 
+                           "Notes.txt", "'Don't play for too long' –Mother");
+            }
 
-        // 2. Second text window appears with additional spacing
-        if (totalTime >= 1.5) {
-            drawWindow(g2, MEMORIES_WINDOW_2.x, MEMORIES_WINDOW_2.y, 
-                       MEMORIES_WINDOW_2.width, MEMORIES_WINDOW_2.height, 
-                       "ntoe.txt", "Helloooooooooooo");
-        }
+            if (totalTime >= 1.5) {
+                drawWindow(g2, MEMORIES_WINDOW_2.x, MEMORIES_WINDOW_2.y, 
+                           MEMORIES_WINDOW_2.width, MEMORIES_WINDOW_2.height, 
+                           "ntoe.txt", "Helloooooooooooo");
+            }
 
-        // 3. Minesweeper window appears last at bottom right
-        if (totalTime >= 2.5) {
-            drawMinesweeperWindow(g2, MINESWEEPER_WINDOW.x, MINESWEEPER_WINDOW.y,
-                    MINESWEEPER_WINDOW.width, MINESWEEPER_WINDOW.height);
+            if (totalTime >= 2.5) {
+                drawMinesweeperWindow(g2, MINESWEEPER_WINDOW.x, MINESWEEPER_WINDOW.y,
+                        MINESWEEPER_WINDOW.width, MINESWEEPER_WINDOW.height);
+            }
         }
 
         drawXPTaskbar(g2);
@@ -524,7 +583,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setColor(new Color(192, 192, 192));
         g2.fillRect(panelX + 2, panelY + 2, panelW - 4, panelH - 4);
 
-        // Adjust Minesweeper step timing to match the extended XP timeline
         int gameStep;
         if (totalTime < 3.1) {
             gameStep = 0;
