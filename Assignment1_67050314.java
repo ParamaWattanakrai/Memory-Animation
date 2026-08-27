@@ -26,10 +26,12 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private static final double WIN11_START = WIN7_TO_WIN11_START + TRANSITION_DURATION; // 13.0s
     private static final double WIN11_TO_BLACK_START = WIN11_START + 1.5; // Shortened Win 11 duration to 1.5s
     private static final double BLACK_START = WIN11_TO_BLACK_START + TRANSITION_DURATION; // 16.5s
-    private static final double BLACK_TO_XP_START = BLACK_START + 3.0; // Display Sahur for 3 seconds (19.5s)
-    private static final double LOOP_DURATION = BLACK_TO_XP_START + TRANSITION_DURATION; // Full loop duration (21.5s)
+    private static final double BLACK_TO_XP_START = BLACK_START + 5.5; // Extended to 5.5s to give audience reading time (22.0s)
+    private static final double LOOP_DURATION = BLACK_TO_XP_START + TRANSITION_DURATION; // Full loop duration (24.0s)
 
-    private static final double MINECRAFT_WINDOW_APPEAR_AT = WIN7_START;
+    // Appearance delays
+    private static final double MINECRAFT_WINDOW_APPEAR_AT = WIN7_START + 1.0; // Delayed appearance (8.0s)
+    private static final double DIALOG_BOX_APPEAR_AT = BLACK_START + 0.8;      // Delayed appearance (17.3s)
 
     // ---- Shared window chrome ----
     private static final int TITLE_BAR_H = 30;
@@ -173,8 +175,10 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
 
         drawSahur(g2, SAHUR_X, SAHUR_Y, scale);
         
-        // Dialog box appearing next to Sahur
-        drawDialogBox(g2, 210, 110, 340, 130, "You brought me into the world\nagainst my will.\nAnd for doing my job,\nyou call me a monster?");
+        // Dialog box appearing later to give audience time to read
+        if (totalTime >= DIALOG_BOX_APPEAR_AT) {
+            drawDialogBox(g2, 210, 110, 340, 130, "You brought me into the world\nagainst my will.\nAnd for doing my job,\nyou call me a monster?");
+        }
     }
 
     private void drawDialogBox(Graphics2D g2, int x, int y, int w, int h, String text) {
