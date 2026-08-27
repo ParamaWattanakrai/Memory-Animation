@@ -19,12 +19,12 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private static final int TARGET_FPS = 60;
 
     // ---- Animation timeline (seconds since start) ----
-    private static final double XP_END = 2.5;
+    private static final double XP_END = 5.0; // Extended for slower XP scene
     private static final double TRANSITION_DURATION = 2.0;
-    private static final double WIN7_START = XP_END + TRANSITION_DURATION;
-    private static final double WIN7_TO_WIN11_START = 7.5;
-    private static final double WIN11_START = WIN7_TO_WIN11_START + TRANSITION_DURATION;
-    private static final double WIN11_TO_BLACK_START = 12.5; 
+    private static final double WIN7_START = XP_END + TRANSITION_DURATION; // 7.0s
+    private static final double WIN7_TO_WIN11_START = WIN7_START + 4.0;    // 11.0s
+    private static final double WIN11_START = WIN7_TO_WIN11_START + TRANSITION_DURATION; // 13.0s
+    private static final double WIN11_TO_BLACK_START = WIN11_START + 1.5; // Shortened Win 11 duration to 1.5s
     private static final double BLACK_START = WIN11_TO_BLACK_START + TRANSITION_DURATION;
 
     private static final double MINECRAFT_WINDOW_APPEAR_AT = WIN7_START;
@@ -33,8 +33,9 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private static final int TITLE_BAR_H = 30;
 
     // ---- Fixed window placements ----
-    private static final Rectangle MEMORIES_WINDOW = new Rectangle(60, 70, 310, 210);
-    private static final Rectangle MINESWEEPER_WINDOW = new Rectangle(170, 80, 280, 340);
+    private static final Rectangle MEMORIES_WINDOW_1 = new Rectangle(40, 45, 290, 190);
+    private static final Rectangle MEMORIES_WINDOW_2 = new Rectangle(80, 110, 290, 190);
+    private static final Rectangle MINESWEEPER_WINDOW = new Rectangle(295, 210, 280, 340);
     private static final Rectangle MINECRAFT_WINDOW = new Rectangle(70, 40, 460, 380);
 
     private static final int TRANSITION_2_X = 298;
@@ -151,7 +152,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setColor(Color.BLACK);
         g2.fillRect(0, 0, W, H);
         
-        // Render the faceted Sahur figure
         drawSahur(g2, W / 2, H / 2 - 20);
     }
 
@@ -162,65 +162,51 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         Color cDark = new Color(50, 20, 5);
         Color cEye = new Color(230, 215, 185);
         
-        // --- 1. Bat (Behind left arm) ---
         drawPolyRel(g2, cShadow, cx, cy, new int[]{-32, -22, -100, -125}, new int[]{65, 60, 210, 220});
         drawPolyRel(g2, cHighlight, cx, cy, new int[]{-29, -25, -105, -115}, new int[]{65, 63, 210, 215}); 
         drawPolyRel(g2, cShadow, cx, cy, new int[]{-135, -105, -115, -145}, new int[]{200, 205, 235, 225}); 
         
-        // --- 2. Left Leg ---
         drawPolyRel(g2, cShadow, cx, cy, new int[]{-15, -5, -10, -20}, new int[]{90, 90, 175, 175}); 
         drawPolyRel(g2, cBase, cx, cy, new int[]{-23, -7, -9, -25}, new int[]{170, 172, 185, 183}); 
         drawPolyRel(g2, cShadow, cx, cy, new int[]{-22, -12, -18, -30}, new int[]{180, 180, 255, 255}); 
         drawPolyRel(g2, cBase, cx, cy, new int[]{-55, -10, -15, -60}, new int[]{250, 250, 265, 265}); 
         
-        // --- 3. Right Leg ---
         drawPolyRel(g2, cShadow, cx, cy, new int[]{25, 35, 38, 28}, new int[]{90, 90, 170, 170}); 
         drawPolyRel(g2, cBase, cx, cy, new int[]{24, 40, 42, 26}, new int[]{167, 169, 182, 180}); 
         drawPolyRel(g2, cShadow, cx, cy, new int[]{28, 38, 42, 32}, new int[]{178, 178, 255, 255}); 
         drawPolyRel(g2, cBase, cx, cy, new int[]{15, 50, 55, 10}, new int[]{250, 250, 265, 265}); 
 
-        // --- 4. Main Body ---
         drawPolyRel(g2, cBase, cx, cy, 
             new int[]{-15, 10, 35, 45, 50, 48, 30, -10, -25, -35, -45, -55, -50, -30}, 
             new int[]{-205, -210, -200, -150, -50, 80, 100, 105, 90, 20, -80, -120, -160, -190});
             
-        // Body Shadow (Left)
         drawPolyRel(g2, cShadow, cx, cy, 
             new int[]{-15, 0, -10, -20, -25, -35, -45, -55, -50, -30},
             new int[]{-205, -190, -50, 80, 90, 20, -80, -120, -160, -190});
             
-        // Body Highlight (Right)
         drawPolyRel(g2, cHighlight, cx, cy, 
             new int[]{35, 45, 50, 48, 30, 20, 25},
             new int[]{-200, -150, -50, 80, 100, 30, -100});
 
-        // --- 5. Face Details ---
-        // Left Eye
         drawPolyRel(g2, cDark, cx, cy, new int[]{-50, -30, -15, -25, -45, -55}, new int[]{-170, -180, -155, -130, -135, -150});
         drawPolyRel(g2, cEye, cx, cy, new int[]{-45, -32, -20, -28, -42, -50}, new int[]{-165, -172, -155, -138, -140, -150});
         drawPolyRel(g2, cDark, cx, cy, new int[]{-35, -25, -22, -28, -38}, new int[]{-160, -165, -150, -142, -152});
         drawPolyRel(g2, Color.WHITE, cx, cy, new int[]{-30, -25, -26, -31}, new int[]{-155, -158, -152, -150}); 
         
-        // Right Eye
         drawPolyRel(g2, cDark, cx, cy, new int[]{5, 25, 40, 35, 15, 0}, new int[]{-185, -190, -165, -140, -135, -160});
         drawPolyRel(g2, cEye, cx, cy, new int[]{10, 25, 35, 30, 15, 5}, new int[]{-180, -185, -165, -145, -140, -160});
         drawPolyRel(g2, cDark, cx, cy, new int[]{20, 30, 33, 25, 17}, new int[]{-172, -175, -162, -158, -162});
         drawPolyRel(g2, Color.WHITE, cx, cy, new int[]{23, 27, 26, 22}, new int[]{-168, -170, -165, -163}); 
         
-        // Nose
         drawPolyRel(g2, cHighlight, cx, cy, new int[]{-10, -25, 0}, new int[]{-140, -115, -120}); 
         drawPolyRel(g2, cShadow, cx, cy, new int[]{0, -25, 10}, new int[]{-120, -115, -110}); 
         
-        // Mouth (Smirk)
         drawPolyRel(g2, cDark, cx, cy, new int[]{-30, -10, 15, 25, 20, 0, -25}, new int[]{-105, -95, -100, -115, -120, -102, -110});
 
-        // --- 6. Arms ---
-        // Left Arm
         drawPolyRel(g2, cBase, cx, cy, new int[]{-30, -20, -35, -45}, new int[]{-30, -30, 25, 25}); 
         drawPolyRel(g2, cShadow, cx, cy, new int[]{-45, -35, -25, -35}, new int[]{25, 25, 60, 60}); 
         drawPolyRel(g2, cDark, cx, cy, new int[]{-40, -20, -25, -45}, new int[]{55, 55, 70, 70}); 
         
-        // Right Arm
         drawPolyRel(g2, cShadow, cx, cy, new int[]{45, 55, 62, 52}, new int[]{-30, -30, 25, 25}); 
         drawPolyRel(g2, cShadow, cx, cy, new int[]{52, 62, 55, 45}, new int[]{25, 25, 70, 70}); 
         drawPolyRel(g2, cBase, cx, cy, new int[]{42, 58, 55, 40}, new int[]{65, 65, 80, 80}); 
@@ -347,9 +333,27 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
 
     private void drawXPScene(Graphics2D g2) {
         drawXPDesktop(g2);
-        drawWindow(g2, MEMORIES_WINDOW.x, MEMORIES_WINDOW.y, MEMORIES_WINDOW.width, MEMORIES_WINDOW.height);
-        drawMinesweeperWindow(g2, MINESWEEPER_WINDOW.x, MINESWEEPER_WINDOW.y,
-                MINESWEEPER_WINDOW.width, MINESWEEPER_WINDOW.height);
+        
+        // 1. First text window appears after breathing room
+        if (totalTime >= 0.5) {
+            drawWindow(g2, MEMORIES_WINDOW_1.x, MEMORIES_WINDOW_1.y, 
+                       MEMORIES_WINDOW_1.width, MEMORIES_WINDOW_1.height, 
+                       "Notes.txt", "'Don't play for too long' –Mother");
+        }
+
+        // 2. Second text window appears with additional spacing
+        if (totalTime >= 1.5) {
+            drawWindow(g2, MEMORIES_WINDOW_2.x, MEMORIES_WINDOW_2.y, 
+                       MEMORIES_WINDOW_2.width, MEMORIES_WINDOW_2.height, 
+                       "ntoe.txt", "Helloooooooooooo");
+        }
+
+        // 3. Minesweeper window appears last at bottom right
+        if (totalTime >= 2.5) {
+            drawMinesweeperWindow(g2, MINESWEEPER_WINDOW.x, MINESWEEPER_WINDOW.y,
+                    MINESWEEPER_WINDOW.width, MINESWEEPER_WINDOW.height);
+        }
+
         drawXPTaskbar(g2);
     }
 
@@ -495,12 +499,12 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setStroke(new BasicStroke(1f));
     }
 
-    private void drawWindow(Graphics2D g2, int x, int y, int w, int h) {
-        drawXPWindowChrome(g2, x, y, w, h, new Color(240, 240, 235), "My Memories.exe");
+    private void drawWindow(Graphics2D g2, int x, int y, int w, int h, String title, String content) {
+        drawXPWindowChrome(g2, x, y, w, h, new Color(240, 240, 235), title);
 
         g2.setColor(Color.BLACK);
         g2.setFont(new Font("Tahoma", Font.PLAIN, 12));
-        g2.drawString("Insert your own memory here...", x + 16, y + TITLE_BAR_H + 30);
+        g2.drawString(content, x + 16, y + TITLE_BAR_H + 30);
     }
 
     private void drawMinesweeperWindow(Graphics2D g2, int x, int y, int w, int h) {
@@ -520,9 +524,14 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setColor(new Color(192, 192, 192));
         g2.fillRect(panelX + 2, panelY + 2, panelW - 4, panelH - 4);
 
+        // Adjust Minesweeper step timing to match the extended XP timeline
         int gameStep;
-        if (totalTime < 2.4) {
-            gameStep = Math.min(2, (int)(totalTime * 1.5));
+        if (totalTime < 3.1) {
+            gameStep = 0;
+        } else if (totalTime < 3.7) {
+            gameStep = 1;
+        } else if (totalTime < 4.3) {
+            gameStep = 2;
         } else {
             gameStep = 3; 
         }
@@ -976,7 +985,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             new int[]{cy + 170, cy + 190, cy + ch, cy + ch}, 4
         );
 
-        boolean isFlashing = (totalTime >= 5.5) && ((int)(totalTime * 8) % 2 == 0); 
+        boolean isFlashing = (totalTime >= WIN7_START + 1.0) && ((int)(totalTime * 8) % 2 == 0); 
         int crx = cx + cw / 2 - 22;
         int cry = cy + 95;
 
@@ -1286,7 +1295,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
 
         g2.drawString("ENG", trayX, taskbarY + 20);
-        g2.drawString("DE", trayX + 2, taskbarY + 32);
+        g2.drawString("TH", trayX + 2, taskbarY + 32);
 
         int iconX = trayX + 30;
         g2.setStroke(new BasicStroke(1.2f));
