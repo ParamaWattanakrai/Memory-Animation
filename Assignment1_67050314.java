@@ -296,28 +296,34 @@ final class DrawUtils {
     }
 }
 
+// Draws a window frame with a title bar for Windows XP
 final class WindowChrome {
 
     private WindowChrome() {}
 
     static void draw(Graphics2D g2, int x, int y, int w, int h, Color bodyColor, String title) {
+        // Draw a shadow behind the window
         g2.setColor(new Color(0, 0, 0, 60));
         g2.fill(new RoundRectangle2D.Double(x + 6, y + 6, w, h, 12, 12));
 
+        // Fill in the window's background color
         g2.setColor(bodyColor);
         g2.fill(new RoundRectangle2D.Double(x, y, w, h, 12, 12));
 
         drawTitleBar(g2, x, y, w);
 
+        // Draw a light-colored outline around the window
         g2.setColor(new Color(255, 255, 255, 100));
         g2.draw(new RoundRectangle2D.Double(x + 1, y + 1, w - 2, h - 2, 10, 10));
 
+        // Draw the window's title text
         g2.setColor(Color.WHITE);
         g2.setFont(new Font("Tahoma", Font.BOLD, 13));
         g2.drawString(title, x + 12, y + 20);
 
         drawControlButtons(g2, x, y, w);
 
+        // Draw small blue lines along the window's edges
         g2.setColor(new Color(0, 70, 200));
         g2.drawLine(x, y + 10, x, y + h - 10);
         g2.drawLine(x + w, y + 10, x + w, y + h - 10);
@@ -325,6 +331,7 @@ final class WindowChrome {
         g2.drawLine(x + 10, y + h, x + w - 10, y + h);
     }
 
+    // Draws the blue title bar on top
     private static void drawTitleBar(Graphics2D g2, int x, int y, int w) {
         GradientPaint titleGrad = new GradientPaint(
                 x, y, new Color(0, 88, 225), x, y + Canvas.TITLE_BAR_H, new Color(30, 110, 255));
@@ -342,6 +349,7 @@ final class WindowChrome {
         g2.setPaint(null);
     }
 
+    // Draws minimize, maximize, and close
     private static void drawControlButtons(Graphics2D g2, int x, int y, int w) {
         int bw = 22, bh = 22, gap = 2;
         int minimizeX = x + w - (bw * 3 + gap * 2) - 6, buttonY = y + 4;
@@ -374,6 +382,7 @@ final class WindowChrome {
     }
 }
 
+// The Windows XP scene
 final class XPScene {
     private static final Rectangle NOTES_WINDOW_1 = new Rectangle(40, 45, 290, 190);
     private static final Rectangle NOTES_WINDOW_2 = new Rectangle(80, 110, 290, 190);
@@ -402,6 +411,7 @@ final class XPScene {
         XPTaskbar.draw(g2);
     }
 
+    // Draws a simple text file window
     private static void drawNoteWindow(Graphics2D g2, Rectangle bounds, String title, String content) {
         WindowChrome.draw(g2, bounds.x, bounds.y, bounds.width, bounds.height, new Color(240, 240, 235), title);
         g2.setColor(Color.BLACK);
@@ -409,6 +419,7 @@ final class XPScene {
         g2.drawString(content, bounds.x + 16, bounds.y + Canvas.TITLE_BAR_H + 30);
     }
 
+    // Draws the Bliss wallpaper
     private static void drawDesktop(Graphics2D g2) {
         Color skyDark = new Color(58, 121, 223);
         Color skyMid = new Color(135, 179, 241);
@@ -430,6 +441,7 @@ final class XPScene {
                 new int[]{220, 600, 600, 480, 450, 400, 320, 280, 250},
                 new int[]{0, 0, 250, 280, 210, 220, 160, 100, 50});
 
+        // The sun, drawn with the midpoint circle algorithm + scanline fill
         DrawUtils.fillMidpointCircle(g2, 510, 65, 38, new Color(233, 239, 246));
 
         DrawUtils.fillPoly(g2, cloudShadow,
@@ -488,6 +500,7 @@ final class XPScene {
     }
 }
 
+// Draws the Windows XP taskbar
 final class XPTaskbar {
 
     private XPTaskbar() {}
