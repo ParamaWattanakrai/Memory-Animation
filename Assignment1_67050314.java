@@ -1123,7 +1123,6 @@ final class MinecraftScene {
         drawDistantMountain(g2, cx, cy);
         drawHouse(g2, cx, cy, cw);
         drawSand(g2, cx, cy, cw, ch);
-        drawWater(g2, cx, cy, cw, ch);
         drawCreeper(g2, cx, cy, cw, ch, t);
         drawCrosshair(g2, cx, cy, cw, ch);
         drawSword(g2, cx, cy, cw, ch);
@@ -1184,16 +1183,6 @@ final class MinecraftScene {
         }
     }
 
-    private static void drawWater(Graphics2D g2, int cx, int cy, int cw, int ch) {
-        int[] xs = {cx, cx + 150, cx + 110, cx};
-        int[] ys = {cy + 170, cy + 190, cy + ch, cy + ch};
-
-        g2.setColor(new Color(140, 140, 140));
-        g2.fillPolygon(xs, ys, 4);
-        g2.setColor(new Color(110, 110, 110));
-        g2.drawPolygon(xs, ys, 4);
-    }
-
     // Draws the creeper, making it flash
     private static void drawCreeper(Graphics2D g2, int cx, int cy, int cw, int ch, double t) {
         boolean flashing = (t >= Timeline.WIN7_START + 1.0) && ((int) (t * 8) % 2 == 0);
@@ -1239,7 +1228,7 @@ final class MinecraftScene {
         g2.fillRect(midX - 1, midY - 6, 3, 13);
     }
 
-    private static void drawSword(Graphics2D g2, int cx, int cy, int cw, int ch) {
+private static void drawSword(Graphics2D g2, int cx, int cy, int cw, int ch) {
         int swX = cx + cw - 110;
         int swY = cy + ch - 120;
 
@@ -1254,8 +1243,29 @@ final class MinecraftScene {
         g2.setColor(Color.BLACK);
         g2.draw(blade);
 
+        Path2D.Double handle = new Path2D.Double();
+        handle.moveTo(swX + 74, swY + 99);
+        handle.lineTo(swX + 81, swY + 92);
+        handle.lineTo(swX + 101, swY + 112);
+        handle.lineTo(swX + 94, swY + 119);
+        handle.closePath();
+
         g2.setColor(new Color(90, 60, 30));
-        g2.fillRect(swX + 55, swY + 90, 35, 16);
+        g2.fill(handle);
+        g2.setColor(Color.BLACK);
+        g2.draw(handle);
+
+        Path2D.Double guard = new Path2D.Double();
+        guard.moveTo(swX + 52, swY + 121);
+        guard.lineTo(swX + 96, swY + 77);
+        guard.lineTo(swX + 102, swY + 83);
+        guard.lineTo(swX + 58, swY + 127);
+        guard.closePath();
+
+        g2.setColor(new Color(110, 75, 35));
+        g2.fill(guard);
+        g2.setColor(Color.BLACK);
+        g2.draw(guard);
     }
 
     private static void drawHud(Graphics2D g2, int cx, int cy, int cw, int ch) {
