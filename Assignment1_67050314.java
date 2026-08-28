@@ -11,6 +11,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private static final int TARGET_FPS = 60;
     private static final long FRAME_TIME_MS = 1000 / TARGET_FPS;
 
+    // A hidden picture we draw on first, then show all at once (this stops flickering)
     private final BufferedImage frameBuffer =
             new BufferedImage(Canvas.W + 1, Canvas.H + 1, BufferedImage.TYPE_INT_ARGB);
 
@@ -23,7 +24,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         Assignment1_67050314 panel = new Assignment1_67050314();
         panel.setPreferredSize(new Dimension(Canvas.W, Canvas.H));
 
-        JFrame frame = new JFrame("Windows OS Transition Sequence");
+        JFrame frame = new JFrame("My Memories");
         frame.add(panel);
         frame.setResizable(false);
         frame.pack();
@@ -39,11 +40,13 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         long lastTimeMs = System.currentTimeMillis();
         while (!Thread.currentThread().isInterrupted()) {
             long nowMs = System.currentTimeMillis();
+            // Add the time that passed since the last frame, and loop back to the start once we reach the end
             totalTime = (totalTime + (nowMs - lastTimeMs) / 1000.0) % Timeline.LOOP_DURATION;
             lastTimeMs = nowMs;
 
             repaint();
 
+            // Wait a little so the animation plays at a steady speed
             try {
                 Thread.sleep(FRAME_TIME_MS);
             } catch (InterruptedException e) {
@@ -52,20 +55,24 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         }
     }
 
+    // Draws one frame to the screen
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
 
+        // Draw everything on the hidden picture first, so the screen doesn't flicker
         Graphics2D g2 = frameBuffer.createGraphics();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         SceneRenderer.render(g2, totalTime);
         g2.dispose();
 
+        // Show the finished picture on the screen
         g.drawImage(frameBuffer, 0, 0, null);
     }
 }
 
+// Stores the size of the drawing area and some other measurements
 final class Canvas {
     static final int W = 600, H = 600;
     static final int TASKBAR_H = 34;
@@ -74,6 +81,7 @@ final class Canvas {
     private Canvas() {}
 }
 
+// Stores when each part of the animation starts and ends
 final class Timeline {
     static final double TRANSITION_DURATION = 2.0;
 
@@ -92,11 +100,13 @@ final class Timeline {
     private Timeline() {}
 }
 
+// Picks which scene to draw, based on the current time
 final class SceneRenderer {
 
     private SceneRenderer() {}
 
     static void render(Graphics2D g2, double t) {
+        // Check the current time and decide which scene to show
         if (t < Timeline.XP_END) {
             XPScene.draw(g2, t, true);
 
@@ -131,29 +141,35 @@ final class SceneRenderer {
     }
 }
 
+// Draws the effects used when switching between scenes
 final class Transitions {
 
     private Transitions() {}
 
+    // Shows a circle growing bigger while playing an explosion effect
     static void explosive(Graphics2D g2, double t, double phaseStart, int originX, int originY,
                            Runnable oldScene, Runnable newScene) {
         double progress = circularWipe(g2, t, phaseStart, originX, originY, oldScene, newScene);
         Explosion.draw(g2, originX, originY, progress);
     }
 
+    // Shows a circle growing bigger to switch scenes, with no extra effects
     static void plain(Graphics2D g2, double t, double phaseStart, int originX, int originY,
                        Runnable oldScene, Runnable newScene) {
         circularWipe(g2, t, phaseStart, originX, originY, oldScene, newScene);
     }
 
+    // Figures out how big the circle should be, so the new scene appears from the center outward
     private static double circularWipe(Graphics2D g2, double t, double phaseStart, int originX, int originY,
                                         Runnable oldScene, Runnable newScene) {
         double progress = (t - phaseStart) / Timeline.TRANSITION_DURATION;
         double maxDist = Math.hypot(Canvas.W, Canvas.H);
         double radius = Math.pow(progress, 2.5) * maxDist;
 
+        // Draw the old scene underneath
         oldScene.run();
 
+        // Draw the new scene, but only show the part inside the circle
         Shape savedClip = g2.getClip();
         g2.setClip(new Ellipse2D.Double(originX - radius, originY - radius, radius * 2, radius * 2));
         newScene.run();
@@ -163,6 +179,7 @@ final class Transitions {
     }
 }
 
+// Draws the explosion effect used during scene transitions
 final class Explosion {
     private static final int RAY_COUNT = 24;
     private static final double RAY_ANGLE_STEP_DEG = 15;
@@ -180,6 +197,7 @@ final class Explosion {
         drawSparkRays(g2, cx, cy, progress, easeOut, alpha);
     }
 
+    // Draws the ring that grows outward from the explosion
     private static void drawShockRing(Graphics2D g2, int cx, int cy, double progress, double easeOut, int alpha) {
         int ringRadius = (int) (easeOut * 800);
         g2.setStroke(new BasicStroke((float) ((1.0 - progress) * 25f)));
@@ -188,6 +206,7 @@ final class Explosion {
         g2.setStroke(new BasicStroke(1f));
     }
 
+    // Draws the bright glowing center of the explosion
     private static void drawBlastCore(Graphics2D g2, int cx, int cy, double easeOut, int alpha) {
         int coreRadius = (int) (easeOut * 600);
         if (coreRadius <= 0) return;
@@ -205,6 +224,7 @@ final class Explosion {
         g2.fillOval(cx - coreRadius, cy - coreRadius, coreRadius * 2, coreRadius * 2);
     }
 
+    // Draws lines shooting outward like sparks
     private static void drawSparkRays(Graphics2D g2, int cx, int cy, double progress, double easeOut, int alpha) {
         g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         for (int i = 0; i < RAY_COUNT; i++) {
@@ -226,11 +246,13 @@ final class Explosion {
         g2.setStroke(new BasicStroke(1f));
     }
 
+    // Keeps the transparency value between 0 and 255
     private static int clampToByte(double value) {
         return Math.max(0, Math.min(255, (int) value));
     }
 }
 
+// Helper class with reusable drawing functions
 final class DrawUtils {
 
     private DrawUtils() {}
@@ -250,6 +272,7 @@ final class DrawUtils {
         fillPoly(g2, color, xs, ys);
     }
 
+    // Midpoint Circle Algorithm + Fill
     static void fillMidpointCircle(Graphics2D g2, int cx, int cy, int radius, Color color) {
         g2.setColor(color);
         int x = 0, y = radius, p = 1 - radius;
@@ -275,28 +298,34 @@ final class DrawUtils {
     }
 }
 
+// Draws a window frame with a title bar, like in an operating system
 final class WindowChrome {
 
     private WindowChrome() {}
 
     static void draw(Graphics2D g2, int x, int y, int w, int h, Color bodyColor, String title) {
+        // Draw a shadow behind the window
         g2.setColor(new Color(0, 0, 0, 60));
         g2.fill(new RoundRectangle2D.Double(x + 6, y + 6, w, h, 12, 12));
 
+        // Fill in the window's background color
         g2.setColor(bodyColor);
         g2.fill(new RoundRectangle2D.Double(x, y, w, h, 12, 12));
 
         drawTitleBar(g2, x, y, w);
 
+        // Draw a thin light-colored outline around the window
         g2.setColor(new Color(255, 255, 255, 100));
         g2.draw(new RoundRectangle2D.Double(x + 1, y + 1, w - 2, h - 2, 10, 10));
 
+        // Draw the window's title text
         g2.setColor(Color.WHITE);
         g2.setFont(new Font("Tahoma", Font.BOLD, 13));
         g2.drawString(title, x + 12, y + 20);
 
         drawControlButtons(g2, x, y, w);
 
+        // Draw small blue lines along the window's edges
         g2.setColor(new Color(0, 70, 200));
         g2.drawLine(x, y + 10, x, y + h - 10);
         g2.drawLine(x + w, y + 10, x + w, y + h - 10);
@@ -304,6 +333,7 @@ final class WindowChrome {
         g2.drawLine(x + 10, y + h, x + w - 10, y + h);
     }
 
+    // Draws the blue title bar at the top of the window
     private static void drawTitleBar(Graphics2D g2, int x, int y, int w) {
         GradientPaint titleGrad = new GradientPaint(
                 x, y, new Color(0, 88, 225), x, y + Canvas.TITLE_BAR_H, new Color(30, 110, 255));
@@ -321,6 +351,7 @@ final class WindowChrome {
         g2.setPaint(null);
     }
 
+    // Draws the three buttons in the corner: minimize, maximize, and close
     private static void drawControlButtons(Graphics2D g2, int x, int y, int w) {
         int bw = 22, bh = 22, gap = 2;
         int minimizeX = x + w - (bw * 3 + gap * 2) - 6, buttonY = y + 4;
@@ -353,6 +384,7 @@ final class WindowChrome {
     }
 }
 
+// The Windows XP desktop scene
 final class XPScene {
     private static final Rectangle NOTES_WINDOW_1 = new Rectangle(40, 45, 290, 190);
     private static final Rectangle NOTES_WINDOW_2 = new Rectangle(80, 110, 290, 190);
@@ -366,6 +398,7 @@ final class XPScene {
     static void draw(Graphics2D g2, double t, boolean showWindows) {
         drawDesktop(g2);
 
+        // Show the desktop windows one by one as time passes
         if (showWindows) {
             if (t >= NOTES_1_APPEAR_AT) {
                 drawNoteWindow(g2, NOTES_WINDOW_1, "Notes.txt", "'Don't play for too long' \u2013Mother");
@@ -381,6 +414,7 @@ final class XPScene {
         XPTaskbar.draw(g2);
     }
 
+    // Draws a simple text file window, like Notepad
     private static void drawNoteWindow(Graphics2D g2, Rectangle bounds, String title, String content) {
         WindowChrome.draw(g2, bounds.x, bounds.y, bounds.width, bounds.height, new Color(240, 240, 235), title);
         g2.setColor(Color.BLACK);
@@ -388,6 +422,7 @@ final class XPScene {
         g2.drawString(content, bounds.x + 16, bounds.y + Canvas.TITLE_BAR_H + 30);
     }
 
+    // Draws the classic Windows XP wallpaper (sky, clouds, and grass)
     private static void drawDesktop(Graphics2D g2) {
         Color skyDark = new Color(58, 121, 223);
         Color skyMid = new Color(135, 179, 241);
@@ -409,7 +444,8 @@ final class XPScene {
                 new int[]{220, 600, 600, 480, 450, 400, 320, 280, 250},
                 new int[]{0, 0, 250, 280, 210, 220, 160, 100, 50});
 
-        DrawUtils.fillMidpointCircle(g2, 510, 65, 38, new Color(233, 239, 246));
+        // The sun, drawn with the midpoint circle algorithm
+        DrawUtils.fillMidpointCircle(g2, 510, 65, 38, new Color(255, 236, 158));
 
         DrawUtils.fillPoly(g2, cloudShadow,
                 new int[]{0, 100, 150, 200, 350, 450, 600, 600, 0},
@@ -467,6 +503,7 @@ final class XPScene {
     }
 }
 
+// Draws the blue taskbar at the bottom of the Windows XP screen
 final class XPTaskbar {
 
     private XPTaskbar() {}
@@ -474,6 +511,7 @@ final class XPTaskbar {
     static void draw(Graphics2D g2) {
         int y = Canvas.H - Canvas.TASKBAR_H;
 
+        // Fill in the taskbar's background color
         GradientPaint bar = new GradientPaint(0, y, new Color(30, 90, 220), 0, Canvas.H, new Color(15, 60, 160));
         g2.setPaint(bar);
         g2.fillRect(0, y, Canvas.W, Canvas.TASKBAR_H);
@@ -483,6 +521,7 @@ final class XPTaskbar {
         g2.setColor(new Color(15, 50, 130));
         g2.fillRect(0, y + 2, Canvas.W, 1);
 
+        // Fill in the background for the clock area on the right
         int trayW = 70;
         int trayX = Canvas.W - trayW - 10;
         g2.setPaint(new GradientPaint(trayX, y, new Color(10, 50, 140), trayX, Canvas.H, new Color(30, 100, 210)));
@@ -492,6 +531,7 @@ final class XPTaskbar {
 
         drawStartButton(g2, y);
 
+        // Show the current time
         String time = LocalTime.now().format(DateTimeFormatter.ofPattern("h:mm a"));
         g2.setFont(new Font("Tahoma", Font.PLAIN, 12));
         FontMetrics fm = g2.getFontMetrics();
@@ -500,6 +540,7 @@ final class XPTaskbar {
         g2.drawString(time, trayX + (Canvas.W - trayX - timeWidth) / 2, y + Canvas.TASKBAR_H / 2 + 5);
     }
 
+    // Draws the classic green Start button
     private static void drawStartButton(Graphics2D g2, int y) {
         RoundRectangle2D.Double startBtn = new RoundRectangle2D.Double(0, y, 105, Canvas.TASKBAR_H, 15, 15);
         g2.setPaint(new GradientPaint(0, y, new Color(80, 180, 70), 0, Canvas.H, new Color(40, 120, 30)));
@@ -530,6 +571,7 @@ final class XPTaskbar {
     }
 }
 
+// Draws the Minesweeper game window
 final class MinesweeperWidget {
     static final Rectangle WINDOW_BOUNDS = new Rectangle(295, 210, 280, 340);
 
@@ -567,6 +609,7 @@ final class MinesweeperWidget {
 
     private MinesweeperWidget() {}
 
+    // Finds the position of the mine that explodes, so the explosion effect can start there
     static Point explosionOrigin() {
         Grid grid = computeGrid();
         return new Point(grid.cellCenterX(HIT_MINE_COL), grid.cellCenterY(HIT_MINE_ROW));
@@ -583,6 +626,7 @@ final class MinesweeperWidget {
         drawGrid(g2, grid, gameStep);
     }
 
+    // Figures out which stage of the game to show, based on the current time
     private static int stepAt(double t) {
         if (t < PARTIAL_REVEAL_AT) return STEP_INTACT;
         if (t < FULL_REVEAL_AT) return STEP_PARTIAL_REVEAL;
@@ -606,6 +650,7 @@ final class MinesweeperWidget {
         return new Grid(gridX, gridY, gridW, gridH, cellW, cellH);
     }
 
+    // Draws the top panel with the counters and the smiley face button
     private static void drawHeaderPanel(Graphics2D g2, Rectangle b, double t, int gameStep, Grid grid) {
         int panelX = b.x + 12;
         int panelY = b.y + 42;
@@ -640,6 +685,7 @@ final class MinesweeperWidget {
         g2.drawString(value, x + 3, y + 18);
     }
 
+    // Draws the smiley face button, showing a dead face if the game is over
     private static void drawFace(Graphics2D g2, int faceX, int faceY, boolean exploded) {
         g2.setColor(new Color(192, 192, 192));
         g2.fillRect(faceX, faceY, 26, 26);
@@ -670,6 +716,7 @@ final class MinesweeperWidget {
         }
     }
 
+    // Goes through each cell on the board and draws it
     private static void drawGrid(Graphics2D g2, Grid grid, int gameStep) {
         drawGridFrame(g2, grid);
 
@@ -679,6 +726,7 @@ final class MinesweeperWidget {
                 int cellX = grid.x + 4 + col * grid.cellW;
                 int cellY = grid.y + 4 + row * grid.cellH;
 
+                // Draw a mine here if the game is over
                 if (exploded && isMine(col, row)) {
                     boolean isHitCell = (col == HIT_MINE_COL && row == HIT_MINE_ROW);
                     drawMineCell(g2, cellX, cellY, grid.cellW, grid.cellH, isHitCell);
@@ -786,6 +834,7 @@ final class MinesweeperWidget {
         g2.setStroke(new BasicStroke(1f));
     }
 
+    // Stores the size and position of the grid
     private static final class Grid {
         final int x, y, width, height, cellW, cellH;
 
@@ -803,6 +852,7 @@ final class MinesweeperWidget {
     }
 }
 
+// The Windows 7 desktop scene
 final class Win7Scene {
 
     private Win7Scene() {}
@@ -817,6 +867,7 @@ final class Win7Scene {
         Win7Taskbar.draw(g2);
     }
 
+    // Draws the glowing blue background, like Windows 7's Aero style
     private static void drawDesktop(Graphics2D g2) {
         GradientPaint sky = new GradientPaint(0, 0, new Color(15, 95, 185), 0, Canvas.H, new Color(5, 45, 105));
         g2.setPaint(sky);
@@ -833,6 +884,7 @@ final class Win7Scene {
         drawCenterLogo(g2, Canvas.W / 2, Canvas.H / 2 - 30);
     }
 
+    // Draws soft glowing curved lines across the screen
     private static void drawRibbons(Graphics2D g2) {
         int w = Canvas.W, h = Canvas.H;
 
@@ -860,6 +912,7 @@ final class Win7Scene {
         g2.setStroke(new BasicStroke(1f));
     }
 
+    // Draws the four-color Windows logo
     private static void drawCenterLogo(Graphics2D g2, int cx, int cy) {
         Path2D.Double redPane = new Path2D.Double();
         redPane.moveTo(cx - 100, cy - 95);
@@ -903,6 +956,7 @@ final class Win7Scene {
     }
 }
 
+// The see-through taskbar for the Windows 7 scene
 final class Win7Taskbar {
 
     private Win7Taskbar() {}
@@ -920,6 +974,7 @@ final class Win7Taskbar {
 
         drawStartOrb(g2, y);
 
+        // Draw the small "Show Desktop" button in the corner
         g2.setColor(new Color(255, 255, 255, 35));
         g2.fillRect(Canvas.W - 14, y + 2, 10, Canvas.TASKBAR_H - 4);
         g2.setColor(new Color(0, 0, 0, 80));
@@ -928,6 +983,7 @@ final class Win7Taskbar {
         drawClock(g2, y);
     }
 
+    // Draws the round, glowing Start button
     private static void drawStartOrb(Graphics2D g2, int y) {
         int orbR = 17;
         int orbX = 22, orbY = y + Canvas.TASKBAR_H / 2;
@@ -953,6 +1009,7 @@ final class Win7Taskbar {
         g2.setColor(new Color(255, 210, 45));
         g2.fillRect(fx + fs + 1, fy + fs + 1, fs, fs);
 
+        // Add a shiny highlight on top of the button
         g2.setPaint(new GradientPaint(orbX, orbY - orbR, new Color(255, 255, 255, 160),
                 orbX, orbY, new Color(255, 255, 255, 0)));
         g2.fillOval(orbX - orbR + 2, orbY - orbR + 1, (orbR - 2) * 2, orbR);
@@ -970,6 +1027,7 @@ final class Win7Taskbar {
     }
 }
 
+// The window that shows the Minecraft scene inside it
 final class Win7MinecraftWindow {
     static final Rectangle WINDOW_BOUNDS = new Rectangle(70, 40, 460, 380);
     private static final int TITLE_H = 30;
@@ -977,6 +1035,7 @@ final class Win7MinecraftWindow {
 
     private Win7MinecraftWindow() {}
 
+    // Gives the position where the creeper explosion should happen
     static Point explosionOrigin() {
         Rectangle b = WINDOW_BOUNDS;
         int clientX = b.x + BORDER;
@@ -1011,6 +1070,7 @@ final class Win7MinecraftWindow {
         int clientW = b.width - BORDER * 2;
         int clientH = b.height - TITLE_H - BORDER;
 
+        // Make sure nothing is drawn outside the window's edges
         Shape savedClip = g2.getClip();
         g2.clip(new Rectangle2D.Double(clientX, clientY, clientW, clientH));
         MinecraftScene.draw(g2, clientX, clientY, clientW, clientH, t);
@@ -1049,10 +1109,12 @@ final class Win7MinecraftWindow {
     }
 }
 
+// Draws the Minecraft gameplay scene
 final class MinecraftScene {
 
     private MinecraftScene() {}
 
+    // Finds the position of the creeper, so the explosion effect can start there
     static Point creeperOrigin(int cx, int cy, int cw, int ch) {
         int crx = cx + cw / 2 - 22;
         int cry = cy + 95;
@@ -1136,6 +1198,7 @@ final class MinecraftScene {
         g2.drawPolygon(xs, ys, 4);
     }
 
+    // Draws the creeper, making it flash white right before it explodes
     private static void drawCreeper(Graphics2D g2, int cx, int cy, int cw, int ch, double t) {
         boolean flashing = (t >= Timeline.WIN7_START + 1.0) && ((int) (t * 8) % 2 == 0);
         int crx = cx + cw / 2 - 22;
@@ -1155,346 +1218,87 @@ final class MinecraftScene {
         g2.fillRect(crx + 11, cry + 32, 5, 5);
         g2.fillRect(crx + 24, cry + 32, 5, 5);
 
-        g2.setColor(flashing ? new Color(200, 245, 200) : new Color(65, 155, 50));
-        g2.fillRect(crx + 6, cry + 40, 28, 36);
-
-        double legSwing = Math.sin(t * 12) * 4;
-        g2.setColor(flashing ? new Color(180, 230, 180) : new Color(50, 130, 40));
-        g2.fillRect(crx + 3, cry + 72 + (int) legSwing, 14, 16);
-        g2.fillRect(crx + 23, cry + 72 - (int) legSwing, 14, 16);
-
-        if (flashing) {
-            g2.setColor(new Color(255, 255, 255, 160));
-            g2.setStroke(new BasicStroke(3f));
-            g2.drawRect(crx - 2, cry - 2, 44, 44);
-            g2.drawRect(crx + 4, cry + 38, 32, 52);
-            g2.setStroke(new BasicStroke(1f));
-        }
+        g2.setColor(flashing ? new Color(220, 255, 220) : new Color(60, 140, 50));
+        g2.fillRect(crx + 8, cry + 40, 24, 30);
+        g2.setColor(flashing ? new Color(220, 255, 220) : new Color(50, 115, 40));
+        g2.fillRect(crx, cry + 70, 14, 16);
+        g2.fillRect(crx + 26, cry + 70, 14, 16);
+        g2.setColor(flashing ? new Color(150, 200, 150) : new Color(40, 95, 30));
+        g2.fillRect(crx + 10, cry + 60, 20, 10);
     }
 
     private static void drawCrosshair(Graphics2D g2, int cx, int cy, int cw, int ch) {
-        int midX = cx + cw / 2;
-        int midY = cy + ch / 2;
-        g2.setColor(new Color(255, 255, 255, 200));
-        g2.fillRect(midX - 6, midY - 1, 13, 3);
-        g2.fillRect(midX - 1, midY - 6, 3, 13);
+        g2.setColor(new Color(255, 255, 255, 120));
+        g2.setStroke(new BasicStroke(2f));
+        g2.drawLine(cx + cw / 2 - 8, cy + ch / 2, cx + cw / 2 + 8, cy + ch / 2);
+        g2.drawLine(cx + cw / 2, cy + ch / 2 - 8, cx + cw / 2, cy + ch / 2 + 8);
+        g2.setStroke(new BasicStroke(1f));
     }
 
     private static void drawSword(Graphics2D g2, int cx, int cy, int cw, int ch) {
-        int swX = cx + cw - 110;
-        int swY = cy + ch - 120;
+        int swx = cx + cw - 90, swy = cy + ch - 100;
 
-        Path2D.Double blade = new Path2D.Double();
-        blade.moveTo(swX + 70, swY + 110);
-        blade.lineTo(swX + 10, swY + 20);
-        blade.lineTo(swX + 25, swY + 10);
-        blade.lineTo(swX + 85, swY + 95);
-        blade.closePath();
-        g2.setColor(new Color(200, 215, 220));
-        g2.fill(blade);
-        g2.setColor(Color.BLACK);
-        g2.draw(blade);
+        g2.setColor(new Color(110, 60, 20));
+        int[] hx = {swx + 40, swx + 55, swx + 65, swx + 50};
+        int[] hy = {swy + 40, swy + 25, swy + 35, swy + 50};
+        g2.fillPolygon(hx, hy, 4);
 
-        g2.setColor(new Color(90, 60, 30));
-        g2.fillRect(swX + 55, swY + 90, 35, 16);
+        g2.setColor(new Color(80, 45, 15));
+        int[] gx = {swx + 35, swx + 25, swx + 55, swx + 65};
+        int[] gy = {swy + 45, swy + 35, swy + 5, swy + 15};
+        g2.fillPolygon(gx, gy, 4);
+
+        g2.setColor(new Color(80, 220, 255));
+        int[] bx = {swx, swx + 25, swx + 55, swx + 25};
+        int[] by = {swy, swy + 35, swy + 5, swy - 20};
+        g2.fillPolygon(bx, by, 4);
+
+        g2.setColor(new Color(40, 170, 220));
+        int[] ex = {swx, swx + 25, swx + 40, swx + 10};
+        int[] ey = {swy, swy + 35, swy + 35, swy + 10};
+        g2.fillPolygon(ex, ey, 4);
     }
 
+    // Draws the health bar, hunger bar, and hotbar at the bottom of the screen
     private static void drawHud(Graphics2D g2, int cx, int cy, int cw, int ch) {
-        int hudX = cx + cw / 2 - 90;
-        int hudY = cy + ch - 24;
+        int hbw = 200, hbh = 22;
+        int hbx = cx + (cw - hbw) / 2, hby = cy + ch - 30;
 
-        g2.setColor(new Color(220, 20, 20));
-        for (int i = 0; i < 10; i++) {
-            g2.fillRect(hudX + (i * 8), hudY - 16, 6, 6);
-        }
-        g2.setColor(new Color(180, 110, 40));
-        for (int i = 0; i < 10; i++) {
-            g2.fillRect(hudX + 100 + (i * 8), hudY - 16, 6, 6);
-        }
-
-        g2.setColor(new Color(90, 215, 50));
-        g2.fillRect(hudX, hudY - 6, 180, 3);
-        g2.setColor(new Color(40, 40, 40));
-        g2.drawRect(hudX - 1, hudY - 7, 182, 5);
-
-        g2.setColor(new Color(140, 140, 140, 210));
-        g2.fillRect(hudX, hudY, 180, 20);
-        g2.setColor(Color.BLACK);
-        g2.drawRect(hudX, hudY, 180, 20);
-        for (int i = 0; i < 9; i++) {
-            g2.drawRect(hudX + (i * 20), hudY, 20, 20);
-        }
-
-        g2.setColor(Color.WHITE);
-        g2.setStroke(new BasicStroke(2f));
-        g2.drawRect(hudX + 19, hudY - 1, 22, 22);
-        g2.setStroke(new BasicStroke(1f));
-
-        g2.setColor(new Color(160, 160, 160));
-        g2.fillRect(hudX + 6, hudY + 4, 8, 12);
-        g2.setColor(new Color(180, 220, 240));
-        g2.fillRect(hudX + 26, hudY + 4, 8, 12);
-        g2.setColor(new Color(160, 160, 160));
-        g2.fillRect(hudX + 46, hudY + 4, 8, 12);
-        g2.setColor(new Color(230, 210, 140));
-        g2.fillRect(hudX + 126, hudY + 6, 10, 8);
-        g2.setColor(new Color(255, 200, 50));
-        g2.fillRect(hudX + 148, hudY + 4, 4, 12);
-    }
-}
-
-final class SahurCharacter {
-    private static final Color WOOD_BASE = new Color(165, 95, 45);
-    private static final Color WOOD_LIGHT = new Color(210, 140, 75);
-    private static final Color WOOD_SHADOW = new Color(105, 50, 20);
-    private static final Color WOOD_DARK = new Color(60, 25, 10);
-    private static final Color EYE_WHITE = new Color(235, 225, 205);
-    private static final Color EYE_PUPIL = new Color(40, 20, 10);
-
-    private SahurCharacter() {}
-
-    static void draw(Graphics2D g2, int cx, int cy, double scale) {
-        AffineTransform saved = g2.getTransform();
-        g2.translate(cx, cy);
-
-        double adjustedScale = scale * 1.4; 
-        g2.scale(adjustedScale, adjustedScale);
-
-        drawStick(g2);
-        drawLegs(g2);
-        drawViewerLeftArm(g2);
-        drawBody(g2);
-        drawFace(g2);
-        drawViewerRightArm(g2);
-
-        g2.setTransform(saved);
-    }
-
-    private static void drawStick(Graphics2D g2) {
-        Path2D stick = new Path2D.Double();
-        stick.moveTo(-25, 30);
-        stick.lineTo(-15, 35);
-        stick.lineTo(-60, 120);
-        stick.lineTo(-75, 115);
-        stick.closePath();
-
-        g2.setColor(WOOD_SHADOW);
-        g2.fill(stick);
-
-        Path2D stickHighlight = new Path2D.Double();
-        stickHighlight.moveTo(-22, 32);
-        stickHighlight.lineTo(-18, 34);
-        stickHighlight.lineTo(-63, 117);
-        stickHighlight.lineTo(-68, 115);
-        stickHighlight.closePath();
-
-        g2.setColor(WOOD_BASE);
-        g2.fill(stickHighlight);
-    }
-
-    private static void drawLegs(Graphics2D g2) {
-        g2.setColor(WOOD_SHADOW);
-        g2.setStroke(new BasicStroke(5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g2.drawLine(-12, 60, -10, 130);
-
-        g2.fillOval(-35, 125, 35, 16); 
-        g2.fillOval(-42, 127, 14, 12); 
-        g2.fillOval(-38, 133, 12, 10); 
-        g2.fillOval(-32, 135, 10, 8);
-        g2.fillOval(-25, 136, 10, 7);
-
-        g2.setColor(WOOD_BASE);
-        g2.drawLine(15, 60, 18, 135);
-
-        g2.fillOval(5, 130, 35, 18);
-        g2.fillOval(32, 132, 14, 14); 
-        g2.fillOval(28, 139, 12, 11);
-        g2.fillOval(20, 142, 10, 9);
-        g2.fillOval(12, 143, 10, 8);
-        g2.setStroke(new BasicStroke(1f));
-    }
-
-    private static void drawViewerLeftArm(Graphics2D g2) {
-        g2.setStroke(new BasicStroke(4.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        Path2D arm = new Path2D.Double();
-        arm.moveTo(-25, -10);
-        arm.curveTo(-32, 15, -30, 30, -22, 45);
-
-        g2.setColor(WOOD_SHADOW);
-        g2.draw(arm);
-        g2.setStroke(new BasicStroke(1f));
-
-        g2.fillOval(-26, 40, 12, 12); 
-    }
-
-    private static void drawViewerRightArm(Graphics2D g2) {
-        g2.setStroke(new BasicStroke(4.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        Path2D arm = new Path2D.Double();
-        arm.moveTo(28, -5);
-        arm.curveTo(35, 10, 33, 30, 25, 45); 
-
-        g2.setColor(WOOD_BASE);
-        g2.draw(arm);
-
-        g2.setColor(WOOD_SHADOW);
-        g2.setStroke(new BasicStroke(1.5f));
-        g2.draw(arm);
-        g2.setStroke(new BasicStroke(1f));
-
-        g2.setColor(WOOD_BASE);
-        g2.fillOval(20, 42, 11, 13);
-    }
-
-    private static void drawBody(Graphics2D g2) {
-        Path2D body = new Path2D.Double();
-        body.moveTo(-28, -105);
-        body.curveTo(-32, -90, -32, 40, -25, 65);
-        body.curveTo(-10, 75, 15, 75, 28, 65);
-        body.curveTo(35, 40, 33, -90, 28, -105);
-        body.curveTo(15, -120, -15, -120, -28, -105);
-        body.closePath();
-
-        g2.setColor(WOOD_BASE);
-        g2.fill(body);
-
-        Path2D shadow = new Path2D.Double();
-        shadow.moveTo(-28, -105);
-        shadow.curveTo(-32, -90, -32, 40, -25, 65);
-        shadow.curveTo(-10, 75, 0, 75, -5, 65);
-        shadow.curveTo(-5, 40, 0, -90, -5, -105);
-        shadow.closePath();
-        g2.setColor(WOOD_SHADOW);
-        g2.fill(shadow);
-
-        Path2D highlight = new Path2D.Double();
-        highlight.moveTo(28, -105);
-        highlight.curveTo(33, -90, 35, 40, 28, 65);
-        highlight.curveTo(15, 75, 10, 75, 15, 65);
-        highlight.curveTo(20, 40, 18, -90, 15, -105);
-        highlight.closePath();
-        g2.setColor(WOOD_LIGHT);
-        g2.fill(highlight);
-    }
-
-    private static void drawFace(Graphics2D g2) {
-        g2.setColor(WOOD_DARK);
-        g2.fillOval(-28, -85, 24, 28);
-        g2.setColor(WOOD_SHADOW);
-        g2.fillOval(-30, -83, 22, 26);
-
-        g2.setColor(EYE_WHITE);
-        g2.fillOval(-26, -82, 18, 22);
-
-        g2.setColor(EYE_PUPIL);
-        g2.fillOval(-22, -77, 10, 12);
-        g2.setColor(Color.WHITE);
-        g2.fillOval(-19, -75, 4, 4);
-
-        g2.setColor(WOOD_DARK);
-        g2.fillOval(0, -90, 32, 34);
-        g2.setColor(WOOD_BASE);
-        g2.fillOval(-2, -88, 30, 32);
-
-        g2.setColor(EYE_WHITE);
-        g2.fillOval(2, -87, 25, 28);
-
-        g2.setColor(EYE_PUPIL);
-        g2.fillOval(8, -81, 14, 16);
-        g2.setColor(Color.WHITE);
-        g2.fillOval(12, -78, 5, 5);
-
-        g2.setColor(WOOD_LIGHT);
-        g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g2.drawArc(2, -95, 25, 15, 45, 100);
-        g2.drawArc(-26, -88, 18, 12, 45, 100);
-        g2.setStroke(new BasicStroke(1f));
-
-        Path2D nose = new Path2D.Double();
-        nose.moveTo(-5, -55);
-        nose.curveTo(-18, -55, -22, -45, -15, -40);
-        nose.lineTo(5, -45);
-        nose.closePath();
-
-        g2.setColor(WOOD_BASE);
-        g2.fill(nose);
-        g2.setColor(WOOD_LIGHT);
-        g2.fillPolygon(new int[]{-5, -14, 0}, new int[]{-53, -42, -45}, 3);
-
-        g2.setColor(WOOD_DARK);
-        g2.setStroke(new BasicStroke(2f));
-        g2.drawArc(-18, -48, 12, 10, 180, 120);
-        g2.setStroke(new BasicStroke(1f));
-
-        g2.setColor(WOOD_DARK);
-        Path2D mouth = new Path2D.Double();
-        mouth.moveTo(-15, -30);
-        mouth.curveTo(-5, -20, 15, -20, 22, -35);
-        mouth.curveTo(15, -25, -5, -25, -15, -30);
-        mouth.closePath();
-        g2.fill(mouth);
-
-        g2.setColor(WOOD_SHADOW);
-        g2.drawArc(15, -45, 12, 20, 270, 70);
-    }
-}
-
-final class DialogBox {
-
-    private DialogBox() {}
-
-    static void draw(Graphics2D g2, int x, int y, int w, int h, String text) {
-        drawShadow(g2, x, y, w, h);
-        drawBubble(g2, x, y, w, h);
-        drawText(g2, x, y, w, h, text);
-    }
-
-    private static void drawShadow(Graphics2D g2, int x, int y, int w, int h) {
         g2.setColor(new Color(0, 0, 0, 120));
-        g2.fillRoundRect(x + 5, y + 5, w, h, 20, 20);
+        g2.fillRect(hbx, hby, hbw, hbh);
+        g2.setColor(new Color(150, 150, 150));
+        g2.drawRect(hbx, hby, hbw, hbh);
 
-        Polygon tailShadow = new Polygon();
-        tailShadow.addPoint(x + 5, y + h - 25);
-        tailShadow.addPoint(x - 25, y + h - 5);
-        tailShadow.addPoint(x + 25, y + h - 5);
-        g2.fillPolygon(tailShadow);
-    }
+        for (int i = 1; i < 9; i++) {
+            g2.drawLine(hbx + i * (hbw / 9), hby, hbx + i * (hbw / 9), hby + hbh);
+        }
 
-    private static void drawBubble(Graphics2D g2, int x, int y, int w, int h) {
-        g2.setColor(Color.WHITE);
-        g2.fillRoundRect(x, y, w, h, 20, 20);
+        g2.setColor(new Color(220, 220, 220));
+        g2.setStroke(new BasicStroke(2f));
+        g2.drawRect(hbx - 2, hby - 2, (hbw / 9) + 4, hbh + 4);
+        g2.setStroke(new BasicStroke(1f));
 
-        Polygon tail = new Polygon();
-        tail.addPoint(x, y + h - 30);
-        tail.addPoint(x - 30, y + h - 10);
-        tail.addPoint(x + 20, y + h - 2);
-        g2.fillPolygon(tail);
-    }
+        g2.setColor(new Color(80, 220, 255));
+        g2.fillRect(hbx + 4, hby + 4, 14, 14);
 
-    private static void drawText(Graphics2D g2, int x, int y, int w, int h, String text) {
-        g2.setColor(Color.BLACK);
-        g2.setFont(new Font("SansSerif", Font.BOLD, 17));
-        FontMetrics fm = g2.getFontMetrics();
-
-        String[] lines = text.split("\n");
-        int lineHeight = fm.getHeight();
-        int totalTextHeight = lines.length * lineHeight;
-        int startY = y + (h - totalTextHeight) / 2 + fm.getAscent();
-
-        for (int i = 0; i < lines.length; i++) {
-            int textWidth = fm.stringWidth(lines[i]);
-            int startX = x + (w - textWidth) / 2;
-            g2.drawString(lines[i], startX, startY + (i * lineHeight));
+        g2.setColor(new Color(20, 20, 20, 100));
+        for (int i = 0; i < 10; i++) {
+            g2.fillOval(hbx + i * 9, hby - 12, 7, 7);
+            g2.fillOval(hbx + hbw - 8 - i * 9, hby - 12, 7, 7);
+        }
+        g2.setColor(new Color(220, 40, 40));
+        for (int i = 0; i < 9; i++) {
+            g2.fillOval(hbx + i * 9, hby - 12, 7, 7);
+        }
+        g2.setColor(new Color(180, 120, 40));
+        for (int i = 0; i < 6; i++) {
+            g2.fillOval(hbx + hbw - 8 - i * 9, hby - 12, 7, 7);
         }
     }
 }
 
+// The scene with the wooden character and its speech bubble
 final class BlackScene {
-    private static final int SAHUR_X = 140; 
-    private static final int SAHUR_Y = 400; 
-    private static final double SAHUR_SCALE = 1.8; 
-
-    private static final String MONOLOGUE =
-            "You brought me into the world\nagainst my will.\nAnd for doing my job,\nyou call me a monster?";
 
     private BlackScene() {}
 
@@ -1502,14 +1306,112 @@ final class BlackScene {
         g2.setColor(Color.BLACK);
         g2.fillRect(0, 0, Canvas.W, Canvas.H);
 
-        SahurCharacter.draw(g2, SAHUR_X, SAHUR_Y, SAHUR_SCALE);
+        SahurCharacter.draw(g2);
 
         if (t >= Timeline.DIALOG_BOX_APPEAR_AT) {
-            DialogBox.draw(g2, 200, 205, 350, 130, MONOLOGUE);
+            DialogBox.draw(g2);
         }
     }
 }
 
+// Draws the Sahur character
+final class SahurCharacter {
+    private static final int CHAR_CX = Canvas.W / 2;
+    private static final int CHAR_CY = Canvas.H / 2 + 50;
+
+    private SahurCharacter() {}
+
+    static void draw(Graphics2D g2) {
+        drawHead(g2, CHAR_CX, CHAR_CY);
+        drawBody(g2, CHAR_CX, CHAR_CY);
+        drawSword(g2, CHAR_CX, CHAR_CY);
+        drawLimb(g2, CHAR_CX, CHAR_CY, -22, 20, -10, 40);
+        drawLimb(g2, CHAR_CX, CHAR_CY, 22, 20, 10, 40);
+        drawLimb(g2, CHAR_CX, CHAR_CY, -12, 60, -20, 40);
+        drawLimb(g2, CHAR_CX, CHAR_CY, 12, 60, 20, 40);
+        drawJoints(g2, CHAR_CX, CHAR_CY);
+    }
+
+    private static void drawHead(Graphics2D g2, int cx, int cy) {
+        g2.setColor(new Color(139, 69, 19));
+        g2.fillOval(cx - 30, cy - 60, 60, 40);
+        g2.setColor(new Color(160, 82, 45));
+        g2.drawOval(cx - 30, cy - 60, 60, 40);
+
+        g2.setColor(Color.WHITE);
+        g2.fillOval(cx - 15, cy - 50, 10, 10);
+        g2.fillOval(cx + 5, cy - 50, 10, 10);
+
+        g2.setColor(Color.BLACK);
+        g2.fillOval(cx - 12, cy - 47, 4, 4);
+        g2.fillOval(cx + 8, cy - 47, 4, 4);
+    }
+
+    private static void drawBody(Graphics2D g2, int cx, int cy) {
+        g2.setColor(new Color(139, 69, 19));
+        g2.fillRect(cx - 15, cy - 20, 30, 80);
+        g2.setColor(new Color(160, 82, 45));
+        g2.drawRect(cx - 15, cy - 20, 30, 80);
+
+        g2.setColor(new Color(105, 50, 10));
+        g2.drawLine(cx, cy - 10, cx, cy + 50);
+        g2.drawLine(cx - 10, cy + 10, cx + 10, cy + 10);
+        g2.drawLine(cx - 10, cy + 30, cx + 10, cy + 30);
+    }
+
+    private static void drawLimb(Graphics2D g2, int cx, int cy, int offsetX, int offsetY, int tipOffsetX, int length) {
+        g2.setColor(new Color(139, 69, 19));
+        g2.setStroke(new BasicStroke(10f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawLine(cx + offsetX, cy + offsetY, cx + offsetX + tipOffsetX, cy + offsetY + length);
+        g2.setColor(new Color(160, 82, 45));
+        g2.setStroke(new BasicStroke(8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawLine(cx + offsetX, cy + offsetY, cx + offsetX + tipOffsetX, cy + offsetY + length);
+        g2.setStroke(new BasicStroke(1f));
+    }
+
+    private static void drawJoints(Graphics2D g2, int cx, int cy) {
+        g2.setColor(new Color(105, 50, 10));
+        g2.fillOval(cx - 20, cy - 25, 10, 10);
+        g2.fillOval(cx + 10, cy - 25, 10, 10);
+        g2.fillOval(cx - 17, cy + 55, 10, 10);
+        g2.fillOval(cx + 7, cy + 55, 10, 10);
+    }
+
+    private static void drawSword(Graphics2D g2, int cx, int cy) {
+        int sx = cx - 35, sy = cy + 40;
+        g2.setColor(new Color(192, 192, 192));
+        g2.fillRect(sx - 15, sy - 60, 8, 50);
+        g2.setColor(Color.WHITE);
+        g2.drawLine(sx - 11, sy - 60, sx - 11, sy - 10);
+        g2.setColor(new Color(205, 133, 63));
+        g2.fillRect(sx - 20, sy - 15, 18, 5);
+        g2.setColor(new Color(139, 69, 19));
+        g2.fillRect(sx - 14, sy - 10, 6, 15);
+    }
+}
+
+// Draws the speech bubble above the Sahur character
+final class DialogBox {
+
+    private DialogBox() {}
+
+    static void draw(Graphics2D g2) {
+        int x = Canvas.W / 2 + 50, y = Canvas.H / 2 - 40;
+
+        g2.setColor(Color.WHITE);
+        g2.fillRoundRect(x, y, 160, 60, 15, 15);
+        g2.fillPolygon(
+                new int[]{x + 20, x + 35, x + 5},
+                new int[]{y + 60, y + 60, y + 80}, 3);
+
+        g2.setColor(Color.BLACK);
+        g2.setFont(new Font("Comic Sans MS", Font.BOLD, 14));
+        g2.drawString("BANG BANG BANG", x + 15, y + 25);
+        g2.drawString("BANG BANG BANG", x + 15, y + 45);
+    }
+}
+
+// The Windows 11 desktop scene
 final class Win11Scene {
 
     private Win11Scene() {}
@@ -1519,182 +1421,121 @@ final class Win11Scene {
         Win11Taskbar.draw(g2);
     }
 
+    // Draws the blue glowing background used in Windows 11
     private static void drawDesktop(Graphics2D g2) {
-        GradientPaint bg = new GradientPaint(
-                0, 0, new Color(165, 195, 225), Canvas.W, Canvas.H, new Color(195, 215, 238));
+        GradientPaint bg = new GradientPaint(0, 0, new Color(15, 30, 60), 0, Canvas.H, new Color(5, 15, 35));
         g2.setPaint(bg);
         g2.fillRect(0, 0, Canvas.W, Canvas.H);
 
         RadialGradientPaint centerGlow = new RadialGradientPaint(
-                new Point2D.Float(Canvas.W * 0.5f, Canvas.H * 0.4f), 400f,
+                new Point2D.Float(Canvas.W / 2f, Canvas.H / 2f), 350f,
                 new float[]{0.0f, 1.0f},
-                new Color[]{new Color(230, 242, 255, 180), new Color(165, 195, 225, 0)});
+                new Color[]{new Color(30, 80, 160, 180), new Color(0, 0, 0, 0)});
         g2.setPaint(centerGlow);
         g2.fillRect(0, 0, Canvas.W, Canvas.H);
 
-        drawBloomPetals(g2);
+        drawBloomShapes(g2);
     }
 
-    private static void drawBloomPetals(Graphics2D g2) {
-        int cx = Canvas.W / 2;
-        int bottomY = Canvas.H - Canvas.TASKBAR_H;
+    // Draws the overlapping blue shapes seen in the Windows 11 wallpaper
+    private static void drawBloomShapes(Graphics2D g2) {
+        int cx = Canvas.W / 2, cy = Canvas.H / 2;
 
-        Path2D.Double p1 = new Path2D.Double();
-        p1.moveTo(cx - 215, bottomY);
-        p1.curveTo(cx - 320, 110, cx - 150, 50, cx, 80);
-        p1.curveTo(cx + 220, 120, cx + 260, 280, cx + 170, bottomY);
-        p1.closePath();
-        g2.setPaint(new GradientPaint(cx - 120, 50, new Color(10, 45, 130), cx + 120, bottomY, new Color(0, 95, 210)));
-        g2.fill(p1);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        Path2D.Double p2 = new Path2D.Double();
-        p2.moveTo(cx - 170, bottomY);
-        p2.curveTo(cx - 250, 150, cx - 70, 90, cx + 60, 130);
-        p2.curveTo(cx + 200, 180, cx + 185, 330, cx + 85, bottomY);
-        p2.closePath();
-        g2.setPaint(new GradientPaint(cx - 100, 90, new Color(15, 115, 235), cx + 70, bottomY, new Color(0, 60, 175)));
-        g2.fill(p2);
+        Path2D.Double bloom1 = new Path2D.Double();
+        bloom1.moveTo(cx - 100, cy + 150);
+        bloom1.curveTo(cx - 20, cy + 180, cx + 80, cy - 20, cx, cy - 100);
+        bloom1.curveTo(cx - 60, cy - 150, cx - 180, cy - 20, cx - 100, cy + 150);
+        bloom1.closePath();
+        g2.setPaint(new GradientPaint(cx - 150, cy, new Color(35, 120, 230, 200), cx + 50, cy, new Color(15, 60, 140, 200)));
+        g2.fill(bloom1);
 
-        Path2D.Double p3 = new Path2D.Double();
-        p3.moveTo(cx - 120, bottomY);
-        p3.curveTo(cx - 185, 190, cx - 15, 130, cx + 85, 170);
-        p3.curveTo(cx + 145, 220, cx + 120, 350, cx - 15, bottomY);
-        p3.closePath();
-        g2.setPaint(new GradientPaint(cx - 65, 130, new Color(75, 175, 255), cx + 45, bottomY, new Color(20, 110, 220)));
-        g2.fill(p3);
+        Path2D.Double bloom2 = new Path2D.Double();
+        bloom2.moveTo(cx + 80, cy + 120);
+        bloom2.curveTo(cx + 180, cy + 80, cx + 120, cy - 80, cx + 20, cy - 120);
+        bloom2.curveTo(cx - 60, cy - 160, cx - 100, cy + 20, cx + 80, cy + 120);
+        bloom2.closePath();
+        g2.setPaint(new GradientPaint(cx, cy - 150, new Color(60, 150, 240, 180), cx + 150, cy + 100, new Color(10, 40, 100, 180)));
+        g2.fill(bloom2);
 
-        Path2D.Double p4 = new Path2D.Double();
-        p4.moveTo(cx - 70, bottomY);
-        p4.curveTo(cx - 125, 250, cx + 20, 190, cx + 90, 230);
-        p4.curveTo(cx + 125, 290, cx + 55, 370, cx - 10, bottomY);
-        p4.closePath();
-        g2.setPaint(new GradientPaint(cx - 25, 190, new Color(135, 210, 255), cx + 25, bottomY, new Color(40, 130, 240)));
-        g2.fill(p4);
+        Path2D.Double bloom3 = new Path2D.Double();
+        bloom3.moveTo(cx - 40, cy + 100);
+        bloom3.curveTo(cx + 40, cy + 120, cx + 80, cy + 20, cx + 20, cy - 40);
+        bloom3.curveTo(cx - 40, cy - 100, cx - 100, cy + 40, cx - 40, cy + 100);
+        bloom3.closePath();
+        g2.setPaint(new GradientPaint(cx - 80, cy, new Color(85, 180, 255, 220), cx + 80, cy, new Color(25, 80, 180, 220)));
+        g2.fill(bloom3);
     }
 }
 
+// Draws the Windows 11 taskbar, centered at the bottom
 final class Win11Taskbar {
-    private static final int ICON_COUNT = 8;
-    private static final int ICON_SPACING = 36;
-    private static final int ICON_SIZE = 20;
 
     private Win11Taskbar() {}
 
     static void draw(Graphics2D g2) {
         int y = Canvas.H - Canvas.TASKBAR_H;
 
-        g2.setColor(new Color(243, 243, 243, 235));
+        g2.setColor(new Color(20, 20, 25, 220));
         g2.fillRect(0, y, Canvas.W, Canvas.TASKBAR_H);
-        g2.setColor(new Color(225, 225, 225));
+        g2.setColor(new Color(255, 255, 255, 30));
         g2.fillRect(0, y, Canvas.W, 1);
 
-        int clusterW = ICON_COUNT * ICON_SPACING;
-        int startX = (Canvas.W - clusterW) / 2;
-        int iconY = y + (Canvas.TASKBAR_H - ICON_SIZE) / 2;
+        int cx = Canvas.W / 2;
+        int iconSize = 24;
+        int spacing = 12;
 
-        drawStartIcon(g2, startX, iconY);
-        drawSearchIcon(g2, startX + ICON_SPACING, iconY);
-        drawTaskViewIcon(g2, startX + ICON_SPACING * 2, iconY);
-        drawWidgetsIcon(g2, startX + ICON_SPACING * 3, iconY);
-        drawTeamsIcon(g2, startX + ICON_SPACING * 4, iconY);
-        drawFileExplorerIcon(g2, startX + ICON_SPACING * 5, iconY);
-        drawEdgeIcon(g2, startX + ICON_SPACING * 6, iconY);
-        drawStoreIcon(g2, startX + ICON_SPACING * 7, iconY);
-
-        g2.setColor(new Color(0, 103, 192));
-        g2.fill(new RoundRectangle2D.Double(startX + ICON_SPACING * 5 + 4, y + Canvas.TASKBAR_H - 3, 12, 2, 1, 1));
-
-        drawSystemTray(g2, y);
+        drawStartButton(g2, cx - iconSize - spacing / 2, y + 5, iconSize);
+        drawExplorerIcon(g2, cx + spacing / 2, y + 5, iconSize);
+        drawTrayAndClock(g2, y);
     }
 
-    private static void drawStartIcon(Graphics2D g2, int x, int y) {
-        int s = 9;
+    // Draws the flat, four-color Windows 11 Start icon
+    private static void drawStartButton(Graphics2D g2, int x, int y, int size) {
+        int paneSize = size / 2 - 1;
         g2.setColor(new Color(0, 120, 215));
-        g2.fill(new RoundRectangle2D.Double(x, y, s, s, 2, 2));
-        g2.fill(new RoundRectangle2D.Double(x + s + 2, y, s, s, 2, 2));
-        g2.fill(new RoundRectangle2D.Double(x, y + s + 2, s, s, 2, 2));
-        g2.fill(new RoundRectangle2D.Double(x + s + 2, y + s + 2, s, s, 2, 2));
+        g2.fillRoundRect(x, y, paneSize, paneSize, 3, 3);
+        g2.fillRoundRect(x + paneSize + 2, y, paneSize, paneSize, 3, 3);
+        g2.fillRoundRect(x, y + paneSize + 2, paneSize, paneSize, 3, 3);
+        g2.fillRoundRect(x + paneSize + 2, y + paneSize + 2, paneSize, paneSize, 3, 3);
+
+        g2.setColor(new Color(255, 255, 255, 60));
+        g2.drawRoundRect(x, y, size, size, 4, 4);
     }
 
-    private static void drawSearchIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(80, 80, 80));
-        g2.setStroke(new BasicStroke(1.8f));
-        g2.drawOval(x + 1, y + 1, 12, 12);
-        g2.drawLine(x + 10, y + 10, x + 16, y + 16);
-        g2.setStroke(new BasicStroke(1f));
+    private static void drawExplorerIcon(Graphics2D g2, int x, int y, int size) {
+        g2.setColor(new Color(245, 205, 75));
+        g2.fillRoundRect(x, y + 4, size, size - 4, 4, 4);
+
+        g2.setColor(new Color(255, 255, 255, 220));
+        g2.fillRoundRect(x + 2, y + 2, size - 4, size / 2, 3, 3);
+        g2.setColor(new Color(230, 180, 50));
+        g2.fillRoundRect(x, y + 6, size, size - 6, 4, 4);
+
+        g2.setColor(new Color(50, 150, 240));
+        g2.fillRoundRect(x + 4, y + 10, size - 8, size - 16, 2, 2);
     }
 
-    private static void drawTaskViewIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(80, 80, 80));
-        g2.setStroke(new BasicStroke(1.5f));
-        g2.drawRoundRect(x + 1, y + 3, 10, 14, 2, 2);
-        g2.setColor(new Color(140, 140, 140));
-        g2.drawRoundRect(x + 6, y + 1, 10, 14, 2, 2);
-        g2.setStroke(new BasicStroke(1f));
-    }
+    // Draws the clock and icons on the right side of the taskbar
+    private static void drawTrayAndClock(Graphics2D g2, int y) {
+        int trayX = Canvas.W - 130;
+        int iconY = y + 10;
 
-    private static void drawWidgetsIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(0, 120, 215));
-        g2.fillRoundRect(x + 1, y + 2, 8, 16, 2, 2);
-        g2.setColor(new Color(0, 164, 239));
-        g2.fillRoundRect(x + 10, y + 2, 8, 16, 2, 2);
-    }
-
-    private static void drawTeamsIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(75, 70, 185));
-        g2.fillOval(x + 1, y + 1, 18, 18);
         g2.setColor(Color.WHITE);
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        g2.drawString("T", x + 6, y + 14);
-    }
-
-    private static void drawFileExplorerIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(245, 180, 35));
-        g2.fillRoundRect(x + 1, y + 4, 18, 13, 3, 3);
-        g2.setColor(new Color(0, 120, 215));
-        g2.fillRect(x + 4, y + 2, 7, 3);
-    }
-
-    private static void drawEdgeIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(15, 140, 205));
-        g2.fillOval(x + 1, y + 1, 18, 18);
-        g2.setColor(new Color(40, 200, 175));
-        g2.fillOval(x + 5, y + 5, 10, 10);
-    }
-
-    private static void drawStoreIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(0, 120, 215));
-        g2.fillRoundRect(x + 2, y + 5, 16, 13, 2, 2);
         g2.setStroke(new BasicStroke(1.5f));
-        g2.drawArc(x + 5, y + 1, 10, 8, 0, 180);
-        g2.setStroke(new BasicStroke(1f));
-    }
+        g2.drawLine(trayX, iconY + 12, trayX + 8, iconY + 12);
+        g2.drawArc(trayX + 1, iconY + 4, 6, 6, 0, 180);
 
-    private static void drawSystemTray(Graphics2D g2, int taskbarY) {
-        int trayX = Canvas.W - 135;
-        g2.setColor(new Color(60, 60, 60));
-
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
-        g2.drawString("ENG", trayX, taskbarY + 21);
-
-        int iconX = trayX + 28;
-        g2.setStroke(new BasicStroke(1.2f));
-        g2.drawArc(iconX, taskbarY + 11, 11, 11, 45, 90);
-        g2.drawArc(iconX + 2, taskbarY + 14, 7, 7, 45, 90);
+        g2.fillRoundRect(trayX + 16, iconY + 4, 10, 8, 2, 2);
         g2.setStroke(new BasicStroke(1f));
 
-        String timeStr = LocalTime.now().format(DateTimeFormatter.ofPattern("12:11"));
-        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("15/10/2021"));
+        String time = LocalTime.now().format(DateTimeFormatter.ofPattern("h:mm a"));
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("M/d/yyyy"));
 
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
-        g2.drawString(timeStr, trayX + 48, taskbarY + 15);
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 9));
-        g2.drawString(dateStr, trayX + 45, taskbarY + 26);
-
-        g2.setColor(new Color(0, 103, 192));
-        g2.fillOval(Canvas.W - 18, taskbarY + 11, 12, 12);
-        g2.setColor(Color.WHITE);
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 9));
-        g2.drawString("3", Canvas.W - 14, taskbarY + 20);
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        FontMetrics fm = g2.getFontMetrics();
+        g2.drawString(time, Canvas.W - fm.stringWidth(time) - 15, y + 14);
+        g2.drawString(date, Canvas.W - fm.stringWidth(date) - 15, y + 27);
     }
 }
