@@ -11,6 +11,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     private static final int TARGET_FPS = 60;
     private static final long FRAME_TIME_MS = 1000 / TARGET_FPS;
 
+    // A frame buffer is a hidden picture we draw on first before displaying
     private final BufferedImage frameBuffer =
             new BufferedImage(Canvas.W + 1, Canvas.H + 1, BufferedImage.TYPE_INT_ARGB);
 
@@ -39,6 +40,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         long lastTimeMs = System.currentTimeMillis();
         while (!Thread.currentThread().isInterrupted()) {
             long nowMs = System.currentTimeMillis();
+            // Add the time that passed since the last frame, and loop back using modulo
             totalTime = (totalTime + (nowMs - lastTimeMs) / 1000.0) % Timeline.LOOP_DURATION;
             lastTimeMs = nowMs;
 
@@ -52,20 +54,24 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         }
     }
 
+    // Draws one frame to the screen
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
 
+        // Draw everything on the frame buffer first
         Graphics2D g2 = frameBuffer.createGraphics();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         SceneRenderer.render(g2, totalTime);
         g2.dispose();
 
+        // Display the frame buffer
         g.drawImage(frameBuffer, 0, 0, null);
     }
 }
 
+// Canvas Properties
 final class Canvas {
     static final int W = 600, H = 600;
     static final int TASKBAR_H = 34;
@@ -74,6 +80,7 @@ final class Canvas {
     private Canvas() {}
 }
 
+// Stores the animation sequence
 final class Timeline {
     static final double TRANSITION_DURATION = 2.0;
 
@@ -92,6 +99,7 @@ final class Timeline {
     private Timeline() {}
 }
 
+// One small step, one giant step
 final class SceneRenderer {
 
     private SceneRenderer() {}
@@ -131,29 +139,35 @@ final class SceneRenderer {
     }
 }
 
+// Draws transitions between scenes
 final class Transitions {
 
     private Transitions() {}
 
+    // Use circular wipe with an explosion as a transition
     static void explosive(Graphics2D g2, double t, double phaseStart, int originX, int originY,
                            Runnable oldScene, Runnable newScene) {
         double progress = circularWipe(g2, t, phaseStart, originX, originY, oldScene, newScene);
         Explosion.draw(g2, originX, originY, progress);
     }
 
+    // Use plain circular wipe as a transition
     static void plain(Graphics2D g2, double t, double phaseStart, int originX, int originY,
                        Runnable oldScene, Runnable newScene) {
         circularWipe(g2, t, phaseStart, originX, originY, oldScene, newScene);
     }
 
+    // Circular wipe logic. Figures out how big the circle should be, so the new scene appears from the center outward
     private static double circularWipe(Graphics2D g2, double t, double phaseStart, int originX, int originY,
                                         Runnable oldScene, Runnable newScene) {
         double progress = (t - phaseStart) / Timeline.TRANSITION_DURATION;
         double maxDist = Math.hypot(Canvas.W, Canvas.H);
         double radius = Math.pow(progress, 2.5) * maxDist;
 
+        // Draw the old scene
         oldScene.run();
 
+        // Draw the new scene, showing the part inside the circle
         Shape savedClip = g2.getClip();
         g2.setClip(new Ellipse2D.Double(originX - radius, originY - radius, radius * 2, radius * 2));
         newScene.run();
@@ -163,6 +177,7 @@ final class Transitions {
     }
 }
 
+// Draws the explosion used in transitions
 final class Explosion {
     private static final int RAY_COUNT = 24;
     private static final double RAY_ANGLE_STEP_DEG = 15;
@@ -180,6 +195,7 @@ final class Explosion {
         drawSparkRays(g2, cx, cy, progress, easeOut, alpha);
     }
 
+    // Draws the ring that grows outward from the explosion
     private static void drawShockRing(Graphics2D g2, int cx, int cy, double progress, double easeOut, int alpha) {
         int ringRadius = (int) (easeOut * 800);
         g2.setStroke(new BasicStroke((float) ((1.0 - progress) * 25f)));
@@ -188,6 +204,7 @@ final class Explosion {
         g2.setStroke(new BasicStroke(1f));
     }
 
+    // Draws the bright center of the explosion
     private static void drawBlastCore(Graphics2D g2, int cx, int cy, double easeOut, int alpha) {
         int coreRadius = (int) (easeOut * 600);
         if (coreRadius <= 0) return;
@@ -205,6 +222,7 @@ final class Explosion {
         g2.fillOval(cx - coreRadius, cy - coreRadius, coreRadius * 2, coreRadius * 2);
     }
 
+    // Draws lines shooting outward like sparks
     private static void drawSparkRays(Graphics2D g2, int cx, int cy, double progress, double easeOut, int alpha) {
         g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         for (int i = 0; i < RAY_COUNT; i++) {
@@ -226,11 +244,13 @@ final class Explosion {
         g2.setStroke(new BasicStroke(1f));
     }
 
+    // Keeps the transparency value between 0 and 255
     private static int clampToByte(double value) {
         return Math.max(0, Math.min(255, (int) value));
     }
 }
 
+// Reusable drawing functions
 final class DrawUtils {
 
     private DrawUtils() {}
@@ -250,6 +270,7 @@ final class DrawUtils {
         fillPoly(g2, color, xs, ys);
     }
 
+    // Midpoint Circle Algorithm + Fill
     static void fillMidpointCircle(Graphics2D g2, int cx, int cy, int radius, Color color) {
         g2.setColor(color);
         int x = 0, y = radius, p = 1 - radius;

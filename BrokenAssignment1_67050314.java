@@ -270,7 +270,7 @@ final class DrawUtils {
         fillPoly(g2, color, xs, ys);
     }
 
-    // Midpoint Circle Algorithm + Fill
+    // Midpoint Circle Algorithm + Scanline Fill
     static void fillMidpointCircle(Graphics2D g2, int cx, int cy, int radius, Color color) {
         g2.setColor(color);
         int x = 0, y = radius, p = 1 - radius;
