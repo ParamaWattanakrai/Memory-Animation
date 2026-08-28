@@ -1244,83 +1244,197 @@ final class MinecraftScene {
 }
 
 final class SahurCharacter {
-    private static final Color BASE = new Color(175, 107, 50);
-    private static final Color SHADOW = new Color(110, 50, 10);
-    private static final Color HIGHLIGHT = new Color(215, 155, 95);
-    private static final Color DARK = new Color(50, 20, 5);
-    private static final Color EYE = new Color(230, 215, 185);
+    private static final Color WOOD_BASE = new Color(165, 95, 45);
+    private static final Color WOOD_LIGHT = new Color(210, 140, 75);
+    private static final Color WOOD_SHADOW = new Color(105, 50, 20);
+    private static final Color WOOD_DARK = new Color(60, 25, 10);
+    private static final Color EYE_WHITE = new Color(235, 225, 205);
+    private static final Color EYE_PUPIL = new Color(40, 20, 10);
 
     private SahurCharacter() {}
 
     static void draw(Graphics2D g2, int cx, int cy, double scale) {
-        drawTail(g2, cx, cy, scale);
-        drawLegs(g2, cx, cy, scale);
-        drawBody(g2, cx, cy, scale);
-        drawEyes(g2, cx, cy, scale);
-        drawMouth(g2, cx, cy, scale);
-        drawArms(g2, cx, cy, scale);
+        AffineTransform saved = g2.getTransform();
+        g2.translate(cx, cy);
+
+        double adjustedScale = scale * 1.4; 
+        g2.scale(adjustedScale, adjustedScale);
+
+        drawStick(g2);
+        drawLegs(g2);
+        drawViewerLeftArm(g2);
+        drawBody(g2);
+        drawFace(g2);
+        drawViewerRightArm(g2);
+
+        g2.setTransform(saved);
     }
 
-    private static void drawTail(Graphics2D g2, int cx, int cy, double scale) {
-        poly(g2, SHADOW, cx, cy, scale, new int[]{-32, -22, -100, -125}, new int[]{65, 60, 210, 220});
-        poly(g2, HIGHLIGHT, cx, cy, scale, new int[]{-29, -25, -105, -115}, new int[]{65, 63, 210, 215});
-        poly(g2, SHADOW, cx, cy, scale, new int[]{-135, -105, -115, -145}, new int[]{200, 205, 235, 225});
+    private static void drawStick(Graphics2D g2) {
+        Path2D stick = new Path2D.Double();
+        stick.moveTo(-25, 30);
+        stick.lineTo(-15, 35);
+        stick.lineTo(-60, 120);
+        stick.lineTo(-75, 115);
+        stick.closePath();
+
+        g2.setColor(WOOD_SHADOW);
+        g2.fill(stick);
+
+        Path2D stickHighlight = new Path2D.Double();
+        stickHighlight.moveTo(-22, 32);
+        stickHighlight.lineTo(-18, 34);
+        stickHighlight.lineTo(-63, 117);
+        stickHighlight.lineTo(-68, 115);
+        stickHighlight.closePath();
+
+        g2.setColor(WOOD_BASE);
+        g2.fill(stickHighlight);
     }
 
-    private static void drawLegs(Graphics2D g2, int cx, int cy, double scale) {
-        poly(g2, SHADOW, cx, cy, scale, new int[]{-15, -5, -10, -20}, new int[]{90, 90, 175, 175});
-        poly(g2, BASE, cx, cy, scale, new int[]{-23, -7, -9, -25}, new int[]{170, 172, 185, 183});
-        poly(g2, SHADOW, cx, cy, scale, new int[]{-22, -12, -18, -30}, new int[]{180, 180, 255, 255});
-        poly(g2, BASE, cx, cy, scale, new int[]{-55, -10, -15, -60}, new int[]{250, 250, 265, 265});
+    private static void drawLegs(Graphics2D g2) {
+        g2.setColor(WOOD_SHADOW);
+        g2.setStroke(new BasicStroke(5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawLine(-12, 60, -10, 130);
 
-        poly(g2, SHADOW, cx, cy, scale, new int[]{25, 35, 38, 28}, new int[]{90, 90, 170, 170});
-        poly(g2, BASE, cx, cy, scale, new int[]{24, 40, 42, 26}, new int[]{167, 169, 182, 180});
-        poly(g2, SHADOW, cx, cy, scale, new int[]{28, 38, 42, 32}, new int[]{178, 178, 255, 255});
-        poly(g2, BASE, cx, cy, scale, new int[]{15, 50, 55, 10}, new int[]{250, 250, 265, 265});
+        g2.fillOval(-35, 125, 35, 16); 
+        g2.fillOval(-42, 127, 14, 12); 
+        g2.fillOval(-38, 133, 12, 10); 
+        g2.fillOval(-32, 135, 10, 8);
+        g2.fillOval(-25, 136, 10, 7);
+
+        g2.setColor(WOOD_BASE);
+        g2.drawLine(15, 60, 18, 135);
+
+        g2.fillOval(5, 130, 35, 18);
+        g2.fillOval(32, 132, 14, 14); 
+        g2.fillOval(28, 139, 12, 11);
+        g2.fillOval(20, 142, 10, 9);
+        g2.fillOval(12, 143, 10, 8);
+        g2.setStroke(new BasicStroke(1f));
     }
 
-    private static void drawBody(Graphics2D g2, int cx, int cy, double scale) {
-        poly(g2, BASE, cx, cy, scale,
-                new int[]{-15, 10, 35, 45, 50, 48, 30, -10, -25, -35, -45, -55, -50, -30},
-                new int[]{-205, -210, -200, -150, -50, 80, 100, 105, 90, 20, -80, -120, -160, -190});
-        poly(g2, SHADOW, cx, cy, scale,
-                new int[]{-15, 0, -10, -20, -25, -35, -45, -55, -50, -30},
-                new int[]{-205, -190, -50, 80, 90, 20, -80, -120, -160, -190});
-        poly(g2, HIGHLIGHT, cx, cy, scale,
-                new int[]{35, 45, 50, 48, 30, 20, 25},
-                new int[]{-200, -150, -50, 80, 100, 30, -100});
+    private static void drawViewerLeftArm(Graphics2D g2) {
+        g2.setStroke(new BasicStroke(4.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        Path2D arm = new Path2D.Double();
+        arm.moveTo(-25, -10);
+        arm.curveTo(-32, 15, -30, 30, -22, 45);
+
+        g2.setColor(WOOD_SHADOW);
+        g2.draw(arm);
+        g2.setStroke(new BasicStroke(1f));
+
+        g2.fillOval(-26, 40, 12, 12); 
     }
 
-    private static void drawEyes(Graphics2D g2, int cx, int cy, double scale) {
-        poly(g2, DARK, cx, cy, scale, new int[]{-50, -30, -15, -25, -45, -55}, new int[]{-170, -180, -155, -130, -135, -150});
-        poly(g2, EYE, cx, cy, scale, new int[]{-45, -32, -20, -28, -42, -50}, new int[]{-165, -172, -155, -138, -140, -150});
-        poly(g2, DARK, cx, cy, scale, new int[]{-35, -25, -22, -28, -38}, new int[]{-160, -165, -150, -142, -152});
-        poly(g2, Color.WHITE, cx, cy, scale, new int[]{-30, -25, -26, -31}, new int[]{-155, -158, -152, -150});
+    private static void drawViewerRightArm(Graphics2D g2) {
+        g2.setStroke(new BasicStroke(4.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        Path2D arm = new Path2D.Double();
+        arm.moveTo(28, -5);
+        arm.curveTo(35, 10, 33, 30, 25, 45); 
 
-        poly(g2, DARK, cx, cy, scale, new int[]{5, 25, 40, 35, 15, 0}, new int[]{-185, -190, -165, -140, -135, -160});
-        poly(g2, EYE, cx, cy, scale, new int[]{10, 25, 35, 30, 15, 5}, new int[]{-180, -185, -165, -140, -140, -160});
-        poly(g2, DARK, cx, cy, scale, new int[]{20, 30, 33, 25, 17}, new int[]{-172, -175, -162, -158, -162});
-        poly(g2, Color.WHITE, cx, cy, scale, new int[]{23, 27, 26, 22}, new int[]{-168, -170, -165, -163});
+        g2.setColor(WOOD_BASE);
+        g2.draw(arm);
+
+        g2.setColor(WOOD_SHADOW);
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.draw(arm);
+        g2.setStroke(new BasicStroke(1f));
+
+        g2.setColor(WOOD_BASE);
+        g2.fillOval(20, 42, 11, 13);
     }
 
-    private static void drawMouth(Graphics2D g2, int cx, int cy, double scale) {
-        poly(g2, HIGHLIGHT, cx, cy, scale, new int[]{-10, -25, 0}, new int[]{-140, -115, -120});
-        poly(g2, SHADOW, cx, cy, scale, new int[]{0, -25, 10}, new int[]{-120, -115, -110});
-        poly(g2, DARK, cx, cy, scale, new int[]{-30, -10, 15, 25, 20, 0, -25}, new int[]{-105, -95, -100, -115, -120, -102, -110});
+    private static void drawBody(Graphics2D g2) {
+        Path2D body = new Path2D.Double();
+        body.moveTo(-28, -105);
+        body.curveTo(-32, -90, -32, 40, -25, 65);
+        body.curveTo(-10, 75, 15, 75, 28, 65);
+        body.curveTo(35, 40, 33, -90, 28, -105);
+        body.curveTo(15, -120, -15, -120, -28, -105);
+        body.closePath();
+
+        g2.setColor(WOOD_BASE);
+        g2.fill(body);
+
+        Path2D shadow = new Path2D.Double();
+        shadow.moveTo(-28, -105);
+        shadow.curveTo(-32, -90, -32, 40, -25, 65);
+        shadow.curveTo(-10, 75, 0, 75, -5, 65);
+        shadow.curveTo(-5, 40, 0, -90, -5, -105);
+        shadow.closePath();
+        g2.setColor(WOOD_SHADOW);
+        g2.fill(shadow);
+
+        Path2D highlight = new Path2D.Double();
+        highlight.moveTo(28, -105);
+        highlight.curveTo(33, -90, 35, 40, 28, 65);
+        highlight.curveTo(15, 75, 10, 75, 15, 65);
+        highlight.curveTo(20, 40, 18, -90, 15, -105);
+        highlight.closePath();
+        g2.setColor(WOOD_LIGHT);
+        g2.fill(highlight);
     }
 
-    private static void drawArms(Graphics2D g2, int cx, int cy, double scale) {
-        poly(g2, BASE, cx, cy, scale, new int[]{-30, -20, -35, -45}, new int[]{-30, -30, 25, 25});
-        poly(g2, SHADOW, cx, cy, scale, new int[]{-45, -35, -25, -35}, new int[]{25, 25, 60, 60});
-        poly(g2, DARK, cx, cy, scale, new int[]{-40, -20, -25, -45}, new int[]{55, 55, 70, 70});
+    private static void drawFace(Graphics2D g2) {
+        g2.setColor(WOOD_DARK);
+        g2.fillOval(-28, -85, 24, 28);
+        g2.setColor(WOOD_SHADOW);
+        g2.fillOval(-30, -83, 22, 26);
 
-        poly(g2, SHADOW, cx, cy, scale, new int[]{45, 55, 62, 52}, new int[]{-30, -30, 25, 25});
-        poly(g2, SHADOW, cx, cy, scale, new int[]{52, 62, 55, 45}, new int[]{25, 25, 70, 70});
-        poly(g2, BASE, cx, cy, scale, new int[]{42, 58, 55, 40}, new int[]{65, 65, 80, 80});
-    }
+        g2.setColor(EYE_WHITE);
+        g2.fillOval(-26, -82, 18, 22);
 
-    private static void poly(Graphics2D g2, Color c, int cx, int cy, double scale, int[] dx, int[] dy) {
-        DrawUtils.fillPolyRelative(g2, c, cx, cy, dx, dy, scale);
+        g2.setColor(EYE_PUPIL);
+        g2.fillOval(-22, -77, 10, 12);
+        g2.setColor(Color.WHITE);
+        g2.fillOval(-19, -75, 4, 4);
+
+        g2.setColor(WOOD_DARK);
+        g2.fillOval(0, -90, 32, 34);
+        g2.setColor(WOOD_BASE);
+        g2.fillOval(-2, -88, 30, 32);
+
+        g2.setColor(EYE_WHITE);
+        g2.fillOval(2, -87, 25, 28);
+
+        g2.setColor(EYE_PUPIL);
+        g2.fillOval(8, -81, 14, 16);
+        g2.setColor(Color.WHITE);
+        g2.fillOval(12, -78, 5, 5);
+
+        g2.setColor(WOOD_LIGHT);
+        g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawArc(2, -95, 25, 15, 45, 100);
+        g2.drawArc(-26, -88, 18, 12, 45, 100);
+        g2.setStroke(new BasicStroke(1f));
+
+        Path2D nose = new Path2D.Double();
+        nose.moveTo(-5, -55);
+        nose.curveTo(-18, -55, -22, -45, -15, -40);
+        nose.lineTo(5, -45);
+        nose.closePath();
+
+        g2.setColor(WOOD_BASE);
+        g2.fill(nose);
+        g2.setColor(WOOD_LIGHT);
+        g2.fillPolygon(new int[]{-5, -14, 0}, new int[]{-53, -42, -45}, 3);
+
+        g2.setColor(WOOD_DARK);
+        g2.setStroke(new BasicStroke(2f));
+        g2.drawArc(-18, -48, 12, 10, 180, 120);
+        g2.setStroke(new BasicStroke(1f));
+
+        g2.setColor(WOOD_DARK);
+        Path2D mouth = new Path2D.Double();
+        mouth.moveTo(-15, -30);
+        mouth.curveTo(-5, -20, 15, -20, 22, -35);
+        mouth.curveTo(15, -25, -5, -25, -15, -30);
+        mouth.closePath();
+        g2.fill(mouth);
+
+        g2.setColor(WOOD_SHADOW);
+        g2.drawArc(15, -45, 12, 20, 270, 70);
     }
 }
 
@@ -1375,8 +1489,9 @@ final class DialogBox {
 }
 
 final class BlackScene {
-    private static final int SAHUR_X = 140, SAHUR_Y = 470;
-    private static final double SAHUR_SCALE = 1.25;
+    private static final int SAHUR_X = 140; 
+    private static final int SAHUR_Y = 400; 
+    private static final double SAHUR_SCALE = 1.8; 
 
     private static final String MONOLOGUE =
             "You brought me into the world\nagainst my will.\nAnd for doing my job,\nyou call me a monster?";
@@ -1390,7 +1505,7 @@ final class BlackScene {
         SahurCharacter.draw(g2, SAHUR_X, SAHUR_Y, SAHUR_SCALE);
 
         if (t >= Timeline.DIALOG_BOX_APPEAR_AT) {
-            DialogBox.draw(g2, 210, 110, 340, 130, MONOLOGUE);
+            DialogBox.draw(g2, 200, 205, 350, 130, MONOLOGUE);
         }
     }
 }
