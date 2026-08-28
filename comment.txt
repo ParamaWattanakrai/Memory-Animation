@@ -1,0 +1,10 @@
+ปรมะ วัฒนไกร 67050314 (ทำคนเดียว)
+Inspirations
+1. Bliss Photo: เป็น Default Wallpaper ของ Windows XP ซึ่งเป็น OS ที่ผมได้สัมผัสครั้งแรก
+2. Minesweeper: เป็นเกมที่ติดมากับ Windows XP
+3. Windows Aero: เป็น Design ของ Windows 7 ที่เน้นกรอบ Window โปร่งใส ซึ่งเป็น OS ที่ผมได้ใช้งานมากที่สุดในวัยเด็ก
+4. Minecraft: เกม Sandbox ที่เป็นที่นิยม มียอดขายอันดับ 2 ของโลก และเป็นเกมที่ทำให้ผมได้พบเจอและสร้างความทรงจำกับเพื่อนมากมาย
+5. Bloom: เป็น Default Wallpaper ของ Windows 11 ซึ่งเป็น OS ที่ผมใช้งานในปัจจุบัน
+6. Tung Tung Tung Tung Tung Tung Tung Tung Tung Sahur: ตัวละครที่เกิดมาจาก Generative AI ตัวแทนของเทคโนโลยีสมัยใหม่ที่ถูกมองว่าเป็นภัยคุกคามต่อมนุษยชาติ ทำนองเดียวกับเทคโนโลยีในทุกยุคสมัย
+Core Idea - ท่องไปในแต่ละยุคสมัยของคอมพิวเตอร์ทั้ง OS และ Software ในความทรงจำของคนรุ่นนี้
+มีการใช้ drawLine() กับ curveTo() หลากหลาย และมีการ implement Midpoint Circle Algorithm เองใน fillMidpointCircle() เพื่อใช้วาดดวงอาทิตย์ในฉาก Windows XP โดยใช้ Scanline Fill ในการเทสีไปพร้อมกับการวาดวงกลมไปด้วย
