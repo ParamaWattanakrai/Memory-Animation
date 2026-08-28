@@ -138,7 +138,7 @@ final class Transitions {
     static void explosive(Graphics2D g2, double t, double phaseStart, int originX, int originY,
                            Runnable oldScene, Runnable newScene) {
         double progress = circularWipe(g2, t, phaseStart, originX, originY, oldScene, newScene);
-        RetroExplosion.draw(g2, originX, originY, progress);
+        Explosion.draw(g2, originX, originY, progress);
     }
 
     static void plain(Graphics2D g2, double t, double phaseStart, int originX, int originY,
@@ -163,12 +163,12 @@ final class Transitions {
     }
 }
 
-final class RetroExplosion {
+final class Explosion {
     private static final int RAY_COUNT = 24;
     private static final double RAY_ANGLE_STEP_DEG = 15;
     private static final double RAY_ANGLE_JITTER_DEG = 7;
 
-    private RetroExplosion() {}
+    private Explosion() {}
 
     static void draw(Graphics2D g2, int cx, int cy, double progress) {
         double easeOut = 1.0 - Math.pow(1.0 - progress, 3);
