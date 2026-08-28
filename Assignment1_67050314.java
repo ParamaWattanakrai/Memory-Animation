@@ -634,17 +634,20 @@ final class MinesweeperWidget {
     // One cell (col 3, row 2) is chorded open a beat later than the rest of the patch.
     private static final int LATE_REVEAL_COL = 3, LATE_REVEAL_ROW = 2;
 
-    // {col, row, unused, revealedValue} - the patch of cells opened once the mine sweeper "clicks".
+    // {col, row, revealedValue} - the patch of cells opened once the minesweeper "clicks".
+    // This is a real flood-fill closure: every 0-value cell here has ALL 8 neighbors also
+    // present in this list (auto-cascading, exactly like real Minesweeper), and every value
+    // is the true count of mines adjacent to that cell given MINE_CELLS below.
     private static final int[][] REVEALED_CELLS = {
-            {2, 0, 1, 1},
-            {2, 1, 1, 2}, {3, 1, 1, 1}, {4, 1, 1, 1}, {5, 1, 1, 1}, {7, 1, 1, 1}, {8, 1, 1, 1},
-            {3, 2, 1, 2}, {5, 2, 1, 1}, {7, 2, 1, 1},
-            {0, 3, 1, 1}, {1, 3, 1, 2}, {3, 3, 1, 2}, {5, 3, 1, 1}, {6, 3, 1, 0}, {7, 3, 1, 2},
-            {1, 4, 1, 1}, {2, 4, 1, 1}, {3, 4, 1, 1}, {4, 4, 1, 0}, {5, 4, 1, 0}, {6, 4, 1, 0}, {7, 4, 1, 2},
-            {0, 5, 1, 0}, {1, 5, 1, 0}, {2, 5, 1, 0}, {3, 5, 1, 0}, {4, 5, 1, 1}, {5, 5, 1, 1}, {6, 5, 1, 1}, {7, 5, 1, 2},
-            {0, 6, 1, 2}, {1, 6, 1, 2}, {2, 6, 1, 1}, {3, 6, 1, 0}, {4, 6, 1, 1}, {6, 6, 1, 1}, {7, 6, 1, 1}, {8, 6, 1, 1},
-            {2, 7, 1, 1}, {3, 7, 1, 0}, {4, 7, 1, 1}, {5, 7, 1, 1}, {6, 7, 1, 1},
-            {2, 8, 1, 1}, {3, 8, 1, 0}, {4, 8, 1, 0}, {5, 8, 1, 0}, {6, 8, 1, 0}, {7, 8, 1, 0}, {8, 8, 1, 0}
+            {2, 0, 1}, {3, 0, 0}, {4, 0, 0}, {5, 0, 0}, {6, 0, 0}, {7, 0, 0}, {8, 0, 0},
+            {2, 1, 2}, {3, 1, 1}, {4, 1, 1}, {5, 1, 1}, {6, 1, 0}, {7, 1, 1}, {8, 1, 1},
+            {3, 2, 2}, {5, 2, 1}, {6, 2, 0}, {7, 2, 1},
+            {0, 3, 1}, {1, 3, 2}, {3, 3, 2}, {4, 3, 1}, {5, 3, 1}, {6, 3, 0}, {7, 3, 2},
+            {0, 4, 0}, {1, 4, 1}, {2, 4, 1}, {3, 4, 1}, {4, 4, 0}, {5, 4, 0}, {6, 4, 0}, {7, 4, 2},
+            {0, 5, 0}, {1, 5, 0}, {2, 5, 0}, {3, 5, 0}, {4, 5, 1}, {5, 5, 1}, {6, 5, 1}, {7, 5, 2},
+            {0, 6, 2}, {1, 6, 2}, {2, 6, 1}, {3, 6, 0}, {4, 6, 1}, {6, 6, 1}, {7, 6, 1}, {8, 6, 1},
+            {2, 7, 1}, {3, 7, 0}, {4, 7, 1}, {5, 7, 1}, {6, 7, 1}, {7, 7, 0}, {8, 7, 0},
+            {2, 8, 1}, {3, 8, 0}, {4, 8, 0}, {5, 8, 0}, {6, 8, 0}, {7, 8, 0}, {8, 8, 0}
     };
 
     private static final int[][] MINE_CELLS = {
@@ -807,9 +810,9 @@ final class MinesweeperWidget {
         for (int[] cell : REVEALED_CELLS) {
             if (cell[0] != col || cell[1] != row) continue;
 
-            boolean isLateReveal = (col == LATE_REVEAL_COL && row == LATE_REVEAL_ROW && cell[3] == 2);
+            boolean isLateReveal = (col == LATE_REVEAL_COL && row == LATE_REVEAL_ROW);
             if (isLateReveal && gameStep < STEP_FULL_REVEAL) return NOT_REVEALED;
-            return cell[3];
+            return cell[2];
         }
         return NOT_REVEALED;
     }
