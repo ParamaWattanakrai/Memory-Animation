@@ -864,6 +864,7 @@ final class Win7Scene {
         Win7Taskbar.draw(g2);
     }
 
+    // Draws the glowing blue background
     private static void drawDesktop(Graphics2D g2) {
         GradientPaint sky = new GradientPaint(0, 0, new Color(15, 95, 185), 0, Canvas.H, new Color(5, 45, 105));
         g2.setPaint(sky);
@@ -880,6 +881,7 @@ final class Win7Scene {
         drawCenterLogo(g2, Canvas.W / 2, Canvas.H / 2 - 30);
     }
 
+    // Draws soft glowing curved lines across the screen
     private static void drawRibbons(Graphics2D g2) {
         int w = Canvas.W, h = Canvas.H;
 
@@ -907,6 +909,7 @@ final class Win7Scene {
         g2.setStroke(new BasicStroke(1f));
     }
 
+    // Draws the Windows logo
     private static void drawCenterLogo(Graphics2D g2, int cx, int cy) {
         Path2D.Double redPane = new Path2D.Double();
         redPane.moveTo(cx - 100, cy - 95);
@@ -950,6 +953,7 @@ final class Win7Scene {
     }
 }
 
+// The see-through taskbar for the Windows 7 scene
 final class Win7Taskbar {
 
     private Win7Taskbar() {}
@@ -967,6 +971,7 @@ final class Win7Taskbar {
 
         drawStartOrb(g2, y);
 
+        // Draw the small "Show Desktop" button in the corner
         g2.setColor(new Color(255, 255, 255, 35));
         g2.fillRect(Canvas.W - 14, y + 2, 10, Canvas.TASKBAR_H - 4);
         g2.setColor(new Color(0, 0, 0, 80));
@@ -975,6 +980,7 @@ final class Win7Taskbar {
         drawClock(g2, y);
     }
 
+    // Draws the round start button
     private static void drawStartOrb(Graphics2D g2, int y) {
         int orbR = 17;
         int orbX = 22, orbY = y + Canvas.TASKBAR_H / 2;
@@ -1009,7 +1015,7 @@ final class Win7Taskbar {
         int trayW = 85;
         int trayX = Canvas.W - trayW - 14;
         String time = LocalTime.now().format(DateTimeFormatter.ofPattern("h:mm a"));
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 12));
         FontMetrics fm = g2.getFontMetrics();
         int timeWidth = fm.stringWidth(time);
         g2.setColor(Color.WHITE);
@@ -1017,6 +1023,7 @@ final class Win7Taskbar {
     }
 }
 
+// The window that shows the Minecraft scene inside it
 final class Win7MinecraftWindow {
     static final Rectangle WINDOW_BOUNDS = new Rectangle(70, 40, 460, 380);
     private static final int TITLE_H = 30;
@@ -1024,6 +1031,7 @@ final class Win7MinecraftWindow {
 
     private Win7MinecraftWindow() {}
 
+    // Gives the position where the creeper explosion should happen
     static Point explosionOrigin() {
         Rectangle b = WINDOW_BOUNDS;
         int clientX = b.x + BORDER;
@@ -1048,7 +1056,7 @@ final class Win7MinecraftWindow {
         g2.fill(new RoundRectangle2D.Double(b.x, b.y, b.width, TITLE_H, 12, 12));
 
         g2.setColor(new Color(15, 25, 40));
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 12));
         g2.drawString("Minecraft 1.5.2 - Singleplayer", b.x + 12, b.y + 20);
 
         drawTitleBarButtons(g2, b);
@@ -1058,6 +1066,7 @@ final class Win7MinecraftWindow {
         int clientW = b.width - BORDER * 2;
         int clientH = b.height - TITLE_H - BORDER;
 
+        // Get clip to make sure nothing is drawn outside the window's edges
         Shape savedClip = g2.getClip();
         g2.clip(new Rectangle2D.Double(clientX, clientY, clientW, clientH));
         MinecraftScene.draw(g2, clientX, clientY, clientW, clientH, t);
@@ -1096,10 +1105,12 @@ final class Win7MinecraftWindow {
     }
 }
 
+// Draws the Minecraft gameplay scene
 final class MinecraftScene {
 
     private MinecraftScene() {}
 
+    // Finds the position of the creeper, so the transition effect can start there
     static Point creeperOrigin(int cx, int cy, int cw, int ch) {
         int crx = cx + cw / 2 - 22;
         int cry = cy + 95;
@@ -1183,6 +1194,7 @@ final class MinecraftScene {
         g2.drawPolygon(xs, ys, 4);
     }
 
+    // Draws the creeper, making it flash
     private static void drawCreeper(Graphics2D g2, int cx, int cy, int cw, int ch, double t) {
         boolean flashing = (t >= Timeline.WIN7_START + 1.0) && ((int) (t * 8) % 2 == 0);
         int crx = cx + cw / 2 - 22;
@@ -1290,6 +1302,7 @@ final class MinecraftScene {
     }
 }
 
+// Draws Tung Tung Tung Tung Tung Tung Tung Tung Tung Sahur
 final class SahurCharacter {
     private static final Color WOOD_BASE = new Color(165, 95, 45);
     private static final Color WOOD_LIGHT = new Color(210, 140, 75);
@@ -1485,6 +1498,7 @@ final class SahurCharacter {
     }
 }
 
+// Draws the speech bubble for Sahur
 final class DialogBox {
 
     private DialogBox() {}
@@ -1519,7 +1533,7 @@ final class DialogBox {
 
     private static void drawText(Graphics2D g2, int x, int y, int w, int h, String text) {
         g2.setColor(Color.BLACK);
-        g2.setFont(new Font("SansSerif", Font.BOLD, 17));
+        g2.setFont(new Font("Tahoma", Font.BOLD, 17));
         FontMetrics fm = g2.getFontMetrics();
 
         String[] lines = text.split("\n");
@@ -1535,6 +1549,7 @@ final class DialogBox {
     }
 }
 
+// The void scene
 final class BlackScene {
     private static final int SAHUR_X = 140; 
     private static final int SAHUR_Y = 400; 
@@ -1557,6 +1572,7 @@ final class BlackScene {
     }
 }
 
+// Draws Windows 11 scene
 final class Win11Scene {
 
     private Win11Scene() {}
@@ -1566,6 +1582,7 @@ final class Win11Scene {
         Win11Taskbar.draw(g2);
     }
 
+    // Draws the blue glowing background
     private static void drawDesktop(Graphics2D g2) {
         GradientPaint bg = new GradientPaint(
                 0, 0, new Color(165, 195, 225), Canvas.W, Canvas.H, new Color(195, 215, 238));
@@ -1582,6 +1599,7 @@ final class Win11Scene {
         drawBloomPetals(g2);
     }
 
+    // Draws the overlapping blue shapes on the wallpaper
     private static void drawBloomPetals(Graphics2D g2) {
         int cx = Canvas.W / 2;
         int bottomY = Canvas.H - Canvas.TASKBAR_H;
@@ -1620,6 +1638,7 @@ final class Win11Scene {
     }
 }
 
+// Draws the Windows 11 centered taskbar
 final class Win11Taskbar {
     private static final int ICON_COUNT = 8;
     private static final int ICON_SPACING = 36;
@@ -1691,7 +1710,7 @@ final class Win11Taskbar {
         g2.setColor(new Color(75, 70, 185));
         g2.fillOval(x + 1, y + 1, 18, 18);
         g2.setColor(Color.WHITE);
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        g2.setFont(new Font("Tahoma", Font.BOLD, 11));
         g2.drawString("T", x + 6, y + 14);
     }
 
@@ -1721,7 +1740,7 @@ final class Win11Taskbar {
         int trayX = Canvas.W - 135;
         g2.setColor(new Color(60, 60, 60));
 
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 10));
         g2.drawString("ENG", trayX, taskbarY + 21);
 
         int iconX = trayX + 28;
@@ -1733,15 +1752,15 @@ final class Win11Taskbar {
         String timeStr = LocalTime.now().format(DateTimeFormatter.ofPattern("12:11"));
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("15/10/2021"));
 
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 10));
         g2.drawString(timeStr, trayX + 48, taskbarY + 15);
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 9));
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 9));
         g2.drawString(dateStr, trayX + 45, taskbarY + 26);
 
         g2.setColor(new Color(0, 103, 192));
         g2.fillOval(Canvas.W - 18, taskbarY + 11, 12, 12);
         g2.setColor(Color.WHITE);
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 9));
+        g2.setFont(new Font("Tahoma", Font.BOLD, 9));
         g2.drawString("3", Canvas.W - 14, taskbarY + 20);
     }
 }
