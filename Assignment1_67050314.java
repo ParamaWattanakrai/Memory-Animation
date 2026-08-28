@@ -508,6 +508,7 @@ final class XPTaskbar {
     static void draw(Graphics2D g2) {
         int y = Canvas.H - Canvas.TASKBAR_H;
 
+        // Fill in the taskbar's background color
         GradientPaint bar = new GradientPaint(0, y, new Color(30, 90, 220), 0, Canvas.H, new Color(15, 60, 160));
         g2.setPaint(bar);
         g2.fillRect(0, y, Canvas.W, Canvas.TASKBAR_H);
@@ -517,6 +518,7 @@ final class XPTaskbar {
         g2.setColor(new Color(15, 50, 130));
         g2.fillRect(0, y + 2, Canvas.W, 1);
 
+        // Fill in the background for the clock area on the right
         int trayW = 70;
         int trayX = Canvas.W - trayW - 10;
         g2.setPaint(new GradientPaint(trayX, y, new Color(10, 50, 140), trayX, Canvas.H, new Color(30, 100, 210)));
@@ -526,6 +528,7 @@ final class XPTaskbar {
 
         drawStartButton(g2, y);
 
+        // Show the current time
         String time = LocalTime.now().format(DateTimeFormatter.ofPattern("h:mm a"));
         g2.setFont(new Font("Tahoma", Font.PLAIN, 12));
         FontMetrics fm = g2.getFontMetrics();
@@ -534,6 +537,7 @@ final class XPTaskbar {
         g2.drawString(time, trayX + (Canvas.W - trayX - timeWidth) / 2, y + Canvas.TASKBAR_H / 2 + 5);
     }
 
+    // Draws the green start button
     private static void drawStartButton(Graphics2D g2, int y) {
         RoundRectangle2D.Double startBtn = new RoundRectangle2D.Double(0, y, 105, Canvas.TASKBAR_H, 15, 15);
         g2.setPaint(new GradientPaint(0, y, new Color(80, 180, 70), 0, Canvas.H, new Color(40, 120, 30)));
@@ -564,6 +568,7 @@ final class XPTaskbar {
     }
 }
 
+// Draws the Minesweeper game window
 final class MinesweeperWidget {
     static final Rectangle WINDOW_BOUNDS = new Rectangle(295, 210, 280, 340);
 
@@ -601,6 +606,7 @@ final class MinesweeperWidget {
 
     private MinesweeperWidget() {}
 
+    // Finds the position of the mine that explodes, so the transition effect can start there
     static Point explosionOrigin() {
         Grid grid = computeGrid();
         return new Point(grid.cellCenterX(HIT_MINE_COL), grid.cellCenterY(HIT_MINE_ROW));
@@ -617,6 +623,7 @@ final class MinesweeperWidget {
         drawGrid(g2, grid, gameStep);
     }
 
+    // Figures out which stage of the game to show, based on the current time
     private static int stepAt(double t) {
         if (t < PARTIAL_REVEAL_AT) return STEP_INTACT;
         if (t < FULL_REVEAL_AT) return STEP_PARTIAL_REVEAL;
@@ -640,6 +647,7 @@ final class MinesweeperWidget {
         return new Grid(gridX, gridY, gridW, gridH, cellW, cellH);
     }
 
+    // Draws the top panel with the counters and the smiley face button
     private static void drawHeaderPanel(Graphics2D g2, Rectangle b, double t, int gameStep, Grid grid) {
         int panelX = b.x + 12;
         int panelY = b.y + 42;
@@ -674,6 +682,7 @@ final class MinesweeperWidget {
         g2.drawString(value, x + 3, y + 18);
     }
 
+    // Draws the smiley face button and dead face if the game is over
     private static void drawFace(Graphics2D g2, int faceX, int faceY, boolean exploded) {
         g2.setColor(new Color(192, 192, 192));
         g2.fillRect(faceX, faceY, 26, 26);
@@ -704,6 +713,7 @@ final class MinesweeperWidget {
         }
     }
 
+    // Draw each cell
     private static void drawGrid(Graphics2D g2, Grid grid, int gameStep) {
         drawGridFrame(g2, grid);
 
@@ -713,6 +723,7 @@ final class MinesweeperWidget {
                 int cellX = grid.x + 4 + col * grid.cellW;
                 int cellY = grid.y + 4 + row * grid.cellH;
 
+                // Draw a mine here if the game is over
                 if (exploded && isMine(col, row)) {
                     boolean isHitCell = (col == HIT_MINE_COL && row == HIT_MINE_ROW);
                     drawMineCell(g2, cellX, cellY, grid.cellW, grid.cellH, isHitCell);
@@ -820,6 +831,7 @@ final class MinesweeperWidget {
         g2.setStroke(new BasicStroke(1f));
     }
 
+    // Stores the properties of the grid
     private static final class Grid {
         final int x, y, width, height, cellW, cellH;
 
@@ -837,6 +849,7 @@ final class MinesweeperWidget {
     }
 }
 
+// The Windows 7 desktop scene
 final class Win7Scene {
 
     private Win7Scene() {}

@@ -538,7 +538,7 @@ final class XPTaskbar {
         g2.drawString(time, trayX + (Canvas.W - trayX - timeWidth) / 2, y + Canvas.TASKBAR_H / 2 + 5);
     }
 
-    // Draws the classic green Start button
+    // Draws the green start button
     private static void drawStartButton(Graphics2D g2, int y) {
         RoundRectangle2D.Double startBtn = new RoundRectangle2D.Double(0, y, 105, Canvas.TASKBAR_H, 15, 15);
         g2.setPaint(new GradientPaint(0, y, new Color(80, 180, 70), 0, Canvas.H, new Color(40, 120, 30)));
@@ -607,7 +607,7 @@ final class MinesweeperWidget {
 
     private MinesweeperWidget() {}
 
-    // Finds the position of the mine that explodes, so the explosion effect can start there
+    // Finds the position of the mine that explodes, so the transition effect can start there
     static Point explosionOrigin() {
         Grid grid = computeGrid();
         return new Point(grid.cellCenterX(HIT_MINE_COL), grid.cellCenterY(HIT_MINE_ROW));
