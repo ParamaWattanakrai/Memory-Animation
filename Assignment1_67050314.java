@@ -296,92 +296,6 @@ final class DrawUtils {
     }
 }
 
-// Draws a window frame with a title bar for Windows XP
-final class WindowChrome {
-
-    private WindowChrome() {}
-
-    static void draw(Graphics2D g2, int x, int y, int w, int h, Color bodyColor, String title) {
-        // Draw a shadow behind the window
-        g2.setColor(new Color(0, 0, 0, 60));
-        g2.fill(new RoundRectangle2D.Double(x + 6, y + 6, w, h, 12, 12));
-
-        // Fill in the window's background color
-        g2.setColor(bodyColor);
-        g2.fill(new RoundRectangle2D.Double(x, y, w, h, 12, 12));
-
-        drawTitleBar(g2, x, y, w);
-
-        // Draw a light-colored outline around the window
-        g2.setColor(new Color(255, 255, 255, 100));
-        g2.draw(new RoundRectangle2D.Double(x + 1, y + 1, w - 2, h - 2, 10, 10));
-
-        // Draw the window's title text
-        g2.setColor(Color.WHITE);
-        g2.setFont(new Font("Tahoma", Font.BOLD, 13));
-        g2.drawString(title, x + 12, y + 20);
-
-        drawControlButtons(g2, x, y, w);
-
-        // Draw small blue lines along the window's edges
-        g2.setColor(new Color(0, 70, 200));
-        g2.drawLine(x, y + 10, x, y + h - 10);
-        g2.drawLine(x + w, y + 10, x + w, y + h - 10);
-        g2.drawLine(x + 10, y, x + w - 10, y);
-        g2.drawLine(x + 10, y + h, x + w - 10, y + h);
-    }
-
-    // Draws the blue title bar on top
-    private static void drawTitleBar(Graphics2D g2, int x, int y, int w) {
-        GradientPaint titleGrad = new GradientPaint(
-                x, y, new Color(0, 88, 225), x, y + Canvas.TITLE_BAR_H, new Color(30, 110, 255));
-        g2.setPaint(titleGrad);
-
-        Path2D.Double titleBar = new Path2D.Double();
-        titleBar.moveTo(x, y + Canvas.TITLE_BAR_H);
-        titleBar.lineTo(x, y + 10);
-        titleBar.quadTo(x, y, x + 10, y);
-        titleBar.lineTo(x + w - 10, y);
-        titleBar.quadTo(x + w, y, x + w, y + 10);
-        titleBar.lineTo(x + w, y + Canvas.TITLE_BAR_H);
-        titleBar.closePath();
-        g2.fill(titleBar);
-        g2.setPaint(null);
-    }
-
-    // Draws minimize, maximize, and close
-    private static void drawControlButtons(Graphics2D g2, int x, int y, int w) {
-        int bw = 22, bh = 22, gap = 2;
-        int minimizeX = x + w - (bw * 3 + gap * 2) - 6, buttonY = y + 4;
-
-        g2.setPaint(new GradientPaint(minimizeX, buttonY, new Color(80, 160, 255),
-                minimizeX, buttonY + bh, new Color(30, 100, 220)));
-        g2.fill(new RoundRectangle2D.Double(minimizeX, buttonY, bw, bh, 4, 4));
-        g2.setColor(Color.WHITE);
-        g2.fillRect(minimizeX + 6, buttonY + bh - 7, bw - 12, 3);
-
-        int maximizeX = minimizeX + bw + gap;
-        g2.setPaint(new GradientPaint(maximizeX, buttonY, new Color(80, 160, 255),
-                maximizeX, buttonY + bh, new Color(30, 100, 220)));
-        g2.fill(new RoundRectangle2D.Double(maximizeX, buttonY, bw, bh, 4, 4));
-        g2.setColor(Color.WHITE);
-        g2.setStroke(new BasicStroke(2f));
-        g2.drawRect(maximizeX + 6, buttonY + 6, bw - 12, bh - 12);
-        g2.fillRect(maximizeX + 6, buttonY + 6, bw - 12, 3);
-        g2.setStroke(new BasicStroke(1f));
-
-        int closeX = maximizeX + bw + gap;
-        g2.setPaint(new GradientPaint(closeX, buttonY, new Color(240, 100, 80),
-                closeX, buttonY + bh, new Color(210, 40, 30)));
-        g2.fill(new RoundRectangle2D.Double(closeX, buttonY, bw, bh, 4, 4));
-        g2.setColor(Color.WHITE);
-        g2.setStroke(new BasicStroke(2f));
-        g2.drawLine(closeX + 7, buttonY + 7, closeX + bw - 7, buttonY + bh - 7);
-        g2.drawLine(closeX + bw - 7, buttonY + 7, closeX + 7, buttonY + bh - 7);
-        g2.setStroke(new BasicStroke(1f));
-    }
-}
-
 // The Windows XP scene
 final class XPScene {
     private static final Rectangle NOTES_WINDOW_1 = new Rectangle(40, 45, 290, 190);
@@ -497,6 +411,92 @@ final class XPScene {
         DrawUtils.fillPoly(g2, grassDeep,
                 new int[]{0, 250, 450, 600, 600, 0},
                 new int[]{540, 555, 570, 580, 600, 600});
+    }
+}
+
+// Draws a window frame with a title bar for Windows XP
+final class WindowChrome {
+
+    private WindowChrome() {}
+
+    static void draw(Graphics2D g2, int x, int y, int w, int h, Color bodyColor, String title) {
+        // Draw a shadow behind the window
+        g2.setColor(new Color(0, 0, 0, 60));
+        g2.fill(new RoundRectangle2D.Double(x + 6, y + 6, w, h, 12, 12));
+
+        // Fill in the window's background color
+        g2.setColor(bodyColor);
+        g2.fill(new RoundRectangle2D.Double(x, y, w, h, 12, 12));
+
+        drawTitleBar(g2, x, y, w);
+
+        // Draw a light-colored outline around the window
+        g2.setColor(new Color(255, 255, 255, 100));
+        g2.draw(new RoundRectangle2D.Double(x + 1, y + 1, w - 2, h - 2, 10, 10));
+
+        // Draw the window's title text
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("Tahoma", Font.BOLD, 13));
+        g2.drawString(title, x + 12, y + 20);
+
+        drawControlButtons(g2, x, y, w);
+
+        // Draw small blue lines along the window's edges
+        g2.setColor(new Color(0, 70, 200));
+        g2.drawLine(x, y + 10, x, y + h - 10);
+        g2.drawLine(x + w, y + 10, x + w, y + h - 10);
+        g2.drawLine(x + 10, y, x + w - 10, y);
+        g2.drawLine(x + 10, y + h, x + w - 10, y + h);
+    }
+
+    // Draws the blue title bar on top
+    private static void drawTitleBar(Graphics2D g2, int x, int y, int w) {
+        GradientPaint titleGrad = new GradientPaint(
+                x, y, new Color(0, 88, 225), x, y + Canvas.TITLE_BAR_H, new Color(30, 110, 255));
+        g2.setPaint(titleGrad);
+
+        Path2D.Double titleBar = new Path2D.Double();
+        titleBar.moveTo(x, y + Canvas.TITLE_BAR_H);
+        titleBar.lineTo(x, y + 10);
+        titleBar.quadTo(x, y, x + 10, y);
+        titleBar.lineTo(x + w - 10, y);
+        titleBar.quadTo(x + w, y, x + w, y + 10);
+        titleBar.lineTo(x + w, y + Canvas.TITLE_BAR_H);
+        titleBar.closePath();
+        g2.fill(titleBar);
+        g2.setPaint(null);
+    }
+
+    // Draws minimize, maximize, and close
+    private static void drawControlButtons(Graphics2D g2, int x, int y, int w) {
+        int bw = 22, bh = 22, gap = 2;
+        int minimizeX = x + w - (bw * 3 + gap * 2) - 6, buttonY = y + 4;
+
+        g2.setPaint(new GradientPaint(minimizeX, buttonY, new Color(80, 160, 255),
+                minimizeX, buttonY + bh, new Color(30, 100, 220)));
+        g2.fill(new RoundRectangle2D.Double(minimizeX, buttonY, bw, bh, 4, 4));
+        g2.setColor(Color.WHITE);
+        g2.fillRect(minimizeX + 6, buttonY + bh - 7, bw - 12, 3);
+
+        int maximizeX = minimizeX + bw + gap;
+        g2.setPaint(new GradientPaint(maximizeX, buttonY, new Color(80, 160, 255),
+                maximizeX, buttonY + bh, new Color(30, 100, 220)));
+        g2.fill(new RoundRectangle2D.Double(maximizeX, buttonY, bw, bh, 4, 4));
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(2f));
+        g2.drawRect(maximizeX + 6, buttonY + 6, bw - 12, bh - 12);
+        g2.fillRect(maximizeX + 6, buttonY + 6, bw - 12, 3);
+        g2.setStroke(new BasicStroke(1f));
+
+        int closeX = maximizeX + bw + gap;
+        g2.setPaint(new GradientPaint(closeX, buttonY, new Color(240, 100, 80),
+                closeX, buttonY + bh, new Color(210, 40, 30)));
+        g2.fill(new RoundRectangle2D.Double(closeX, buttonY, bw, bh, 4, 4));
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(2f));
+        g2.drawLine(closeX + 7, buttonY + 7, closeX + bw - 7, buttonY + bh - 7);
+        g2.drawLine(closeX + bw - 7, buttonY + 7, closeX + 7, buttonY + bh - 7);
+        g2.setStroke(new BasicStroke(1f));
     }
 }
 
@@ -1302,6 +1302,222 @@ final class MinecraftScene {
     }
 }
 
+// Draws Windows 11 scene
+final class Win11Scene {
+
+    private Win11Scene() {}
+
+    static void draw(Graphics2D g2, double t) {
+        drawDesktop(g2);
+        Win11Taskbar.draw(g2);
+    }
+
+    // Draws the blue glowing background
+    private static void drawDesktop(Graphics2D g2) {
+        GradientPaint bg = new GradientPaint(
+                0, 0, new Color(165, 195, 225), Canvas.W, Canvas.H, new Color(195, 215, 238));
+        g2.setPaint(bg);
+        g2.fillRect(0, 0, Canvas.W, Canvas.H);
+
+        RadialGradientPaint centerGlow = new RadialGradientPaint(
+                new Point2D.Float(Canvas.W * 0.5f, Canvas.H * 0.4f), 400f,
+                new float[]{0.0f, 1.0f},
+                new Color[]{new Color(230, 242, 255, 180), new Color(165, 195, 225, 0)});
+        g2.setPaint(centerGlow);
+        g2.fillRect(0, 0, Canvas.W, Canvas.H);
+
+        drawBloomPetals(g2);
+    }
+
+    // Draws the overlapping blue shapes on the wallpaper
+    private static void drawBloomPetals(Graphics2D g2) {
+        int cx = Canvas.W / 2;
+        int bottomY = Canvas.H - Canvas.TASKBAR_H;
+
+        Path2D.Double p1 = new Path2D.Double();
+        p1.moveTo(cx - 215, bottomY);
+        p1.curveTo(cx - 320, 110, cx - 150, 50, cx, 80);
+        p1.curveTo(cx + 220, 120, cx + 260, 280, cx + 170, bottomY);
+        p1.closePath();
+        g2.setPaint(new GradientPaint(cx - 120, 50, new Color(10, 45, 130), cx + 120, bottomY, new Color(0, 95, 210)));
+        g2.fill(p1);
+
+        Path2D.Double p2 = new Path2D.Double();
+        p2.moveTo(cx - 170, bottomY);
+        p2.curveTo(cx - 250, 150, cx - 70, 90, cx + 60, 130);
+        p2.curveTo(cx + 200, 180, cx + 185, 330, cx + 85, bottomY);
+        p2.closePath();
+        g2.setPaint(new GradientPaint(cx - 100, 90, new Color(15, 115, 235), cx + 70, bottomY, new Color(0, 60, 175)));
+        g2.fill(p2);
+
+        Path2D.Double p3 = new Path2D.Double();
+        p3.moveTo(cx - 120, bottomY);
+        p3.curveTo(cx - 185, 190, cx - 15, 130, cx + 85, 170);
+        p3.curveTo(cx + 145, 220, cx + 120, 350, cx - 15, bottomY);
+        p3.closePath();
+        g2.setPaint(new GradientPaint(cx - 65, 130, new Color(75, 175, 255), cx + 45, bottomY, new Color(20, 110, 220)));
+        g2.fill(p3);
+
+        Path2D.Double p4 = new Path2D.Double();
+        p4.moveTo(cx - 70, bottomY);
+        p4.curveTo(cx - 125, 250, cx + 20, 190, cx + 90, 230);
+        p4.curveTo(cx + 125, 290, cx + 55, 370, cx - 10, bottomY);
+        p4.closePath();
+        g2.setPaint(new GradientPaint(cx - 25, 190, new Color(135, 210, 255), cx + 25, bottomY, new Color(40, 130, 240)));
+        g2.fill(p4);
+    }
+}
+
+// Draws the Windows 11 centered taskbar
+final class Win11Taskbar {
+    private static final int ICON_COUNT = 8;
+    private static final int ICON_SPACING = 36;
+    private static final int ICON_SIZE = 20;
+
+    private Win11Taskbar() {}
+
+    static void draw(Graphics2D g2) {
+        int y = Canvas.H - Canvas.TASKBAR_H;
+
+        g2.setColor(new Color(243, 243, 243, 235));
+        g2.fillRect(0, y, Canvas.W, Canvas.TASKBAR_H);
+        g2.setColor(new Color(225, 225, 225));
+        g2.fillRect(0, y, Canvas.W, 1);
+
+        int clusterW = ICON_COUNT * ICON_SPACING;
+        int startX = (Canvas.W - clusterW) / 2;
+        int iconY = y + (Canvas.TASKBAR_H - ICON_SIZE) / 2;
+
+        drawStartIcon(g2, startX, iconY);
+        drawSearchIcon(g2, startX + ICON_SPACING, iconY);
+        drawTaskViewIcon(g2, startX + ICON_SPACING * 2, iconY);
+        drawWidgetsIcon(g2, startX + ICON_SPACING * 3, iconY);
+        drawTeamsIcon(g2, startX + ICON_SPACING * 4, iconY);
+        drawFileExplorerIcon(g2, startX + ICON_SPACING * 5, iconY);
+        drawEdgeIcon(g2, startX + ICON_SPACING * 6, iconY);
+        drawStoreIcon(g2, startX + ICON_SPACING * 7, iconY);
+
+        g2.setColor(new Color(0, 103, 192));
+        g2.fill(new RoundRectangle2D.Double(startX + ICON_SPACING * 5 + 4, y + Canvas.TASKBAR_H - 3, 12, 2, 1, 1));
+
+        drawSystemTray(g2, y);
+    }
+
+    private static void drawStartIcon(Graphics2D g2, int x, int y) {
+        int s = 9;
+        g2.setColor(new Color(0, 120, 215));
+        g2.fill(new RoundRectangle2D.Double(x, y, s, s, 2, 2));
+        g2.fill(new RoundRectangle2D.Double(x + s + 2, y, s, s, 2, 2));
+        g2.fill(new RoundRectangle2D.Double(x, y + s + 2, s, s, 2, 2));
+        g2.fill(new RoundRectangle2D.Double(x + s + 2, y + s + 2, s, s, 2, 2));
+    }
+
+    private static void drawSearchIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(80, 80, 80));
+        g2.setStroke(new BasicStroke(1.8f));
+        g2.drawOval(x + 1, y + 1, 12, 12);
+        g2.drawLine(x + 10, y + 10, x + 16, y + 16);
+        g2.setStroke(new BasicStroke(1f));
+    }
+
+    private static void drawTaskViewIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(80, 80, 80));
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawRoundRect(x + 1, y + 3, 10, 14, 2, 2);
+        g2.setColor(new Color(140, 140, 140));
+        g2.drawRoundRect(x + 6, y + 1, 10, 14, 2, 2);
+        g2.setStroke(new BasicStroke(1f));
+    }
+
+    private static void drawWidgetsIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(0, 120, 215));
+        g2.fillRoundRect(x + 1, y + 2, 8, 16, 2, 2);
+        g2.setColor(new Color(0, 164, 239));
+        g2.fillRoundRect(x + 10, y + 2, 8, 16, 2, 2);
+    }
+
+    private static void drawTeamsIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(75, 70, 185));
+        g2.fillOval(x + 1, y + 1, 18, 18);
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("Tahoma", Font.BOLD, 11));
+        g2.drawString("T", x + 6, y + 14);
+    }
+
+    private static void drawFileExplorerIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(245, 180, 35));
+        g2.fillRoundRect(x + 1, y + 4, 18, 13, 3, 3);
+        g2.setColor(new Color(0, 120, 215));
+        g2.fillRect(x + 4, y + 2, 7, 3);
+    }
+
+    private static void drawEdgeIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(15, 140, 205));
+        g2.fillOval(x + 1, y + 1, 18, 18);
+        g2.setColor(new Color(40, 200, 175));
+        g2.fillOval(x + 5, y + 5, 10, 10);
+    }
+
+    private static void drawStoreIcon(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(0, 120, 215));
+        g2.fillRoundRect(x + 2, y + 5, 16, 13, 2, 2);
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawArc(x + 5, y + 1, 10, 8, 0, 180);
+        g2.setStroke(new BasicStroke(1f));
+    }
+
+    private static void drawSystemTray(Graphics2D g2, int taskbarY) {
+        int trayX = Canvas.W - 135;
+        g2.setColor(new Color(60, 60, 60));
+
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 10));
+        g2.drawString("ENG", trayX, taskbarY + 21);
+
+        int iconX = trayX + 28;
+        g2.setStroke(new BasicStroke(1.2f));
+        g2.drawArc(iconX, taskbarY + 11, 11, 11, 45, 90);
+        g2.drawArc(iconX + 2, taskbarY + 14, 7, 7, 45, 90);
+        g2.setStroke(new BasicStroke(1f));
+
+        String timeStr = LocalTime.now().format(DateTimeFormatter.ofPattern("12:11"));
+        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("15/10/2021"));
+
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 10));
+        g2.drawString(timeStr, trayX + 48, taskbarY + 15);
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 9));
+        g2.drawString(dateStr, trayX + 45, taskbarY + 26);
+
+        g2.setColor(new Color(0, 103, 192));
+        g2.fillOval(Canvas.W - 18, taskbarY + 11, 12, 12);
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("Tahoma", Font.BOLD, 9));
+        g2.drawString("3", Canvas.W - 14, taskbarY + 20);
+    }
+}
+
+// The void scene
+final class BlackScene {
+    private static final int SAHUR_X = 140; 
+    private static final int SAHUR_Y = 400; 
+    private static final double SAHUR_SCALE = 1.8; 
+
+    private static final String MONOLOGUE =
+            "You brought me into the world\nagainst my will.\nAnd for doing my job,\nyou call me a monster?";
+
+    private BlackScene() {}
+
+    static void draw(Graphics2D g2, double t) {
+        g2.setColor(Color.BLACK);
+        g2.fillRect(0, 0, Canvas.W, Canvas.H);
+
+        SahurCharacter.draw(g2, SAHUR_X, SAHUR_Y, SAHUR_SCALE);
+
+        if (t >= Timeline.DIALOG_BOX_APPEAR_AT) {
+            DialogBox.draw(g2, 200, 205, 350, 130, MONOLOGUE);
+        }
+    }
+}
+
 // Draws Tung Tung Tung Tung Tung Tung Tung Tung Tung Sahur
 final class SahurCharacter {
     private static final Color WOOD_BASE = new Color(165, 95, 45);
@@ -1546,221 +1762,5 @@ final class DialogBox {
             int startX = x + (w - textWidth) / 2;
             g2.drawString(lines[i], startX, startY + (i * lineHeight));
         }
-    }
-}
-
-// The void scene
-final class BlackScene {
-    private static final int SAHUR_X = 140; 
-    private static final int SAHUR_Y = 400; 
-    private static final double SAHUR_SCALE = 1.8; 
-
-    private static final String MONOLOGUE =
-            "You brought me into the world\nagainst my will.\nAnd for doing my job,\nyou call me a monster?";
-
-    private BlackScene() {}
-
-    static void draw(Graphics2D g2, double t) {
-        g2.setColor(Color.BLACK);
-        g2.fillRect(0, 0, Canvas.W, Canvas.H);
-
-        SahurCharacter.draw(g2, SAHUR_X, SAHUR_Y, SAHUR_SCALE);
-
-        if (t >= Timeline.DIALOG_BOX_APPEAR_AT) {
-            DialogBox.draw(g2, 200, 205, 350, 130, MONOLOGUE);
-        }
-    }
-}
-
-// Draws Windows 11 scene
-final class Win11Scene {
-
-    private Win11Scene() {}
-
-    static void draw(Graphics2D g2, double t) {
-        drawDesktop(g2);
-        Win11Taskbar.draw(g2);
-    }
-
-    // Draws the blue glowing background
-    private static void drawDesktop(Graphics2D g2) {
-        GradientPaint bg = new GradientPaint(
-                0, 0, new Color(165, 195, 225), Canvas.W, Canvas.H, new Color(195, 215, 238));
-        g2.setPaint(bg);
-        g2.fillRect(0, 0, Canvas.W, Canvas.H);
-
-        RadialGradientPaint centerGlow = new RadialGradientPaint(
-                new Point2D.Float(Canvas.W * 0.5f, Canvas.H * 0.4f), 400f,
-                new float[]{0.0f, 1.0f},
-                new Color[]{new Color(230, 242, 255, 180), new Color(165, 195, 225, 0)});
-        g2.setPaint(centerGlow);
-        g2.fillRect(0, 0, Canvas.W, Canvas.H);
-
-        drawBloomPetals(g2);
-    }
-
-    // Draws the overlapping blue shapes on the wallpaper
-    private static void drawBloomPetals(Graphics2D g2) {
-        int cx = Canvas.W / 2;
-        int bottomY = Canvas.H - Canvas.TASKBAR_H;
-
-        Path2D.Double p1 = new Path2D.Double();
-        p1.moveTo(cx - 215, bottomY);
-        p1.curveTo(cx - 320, 110, cx - 150, 50, cx, 80);
-        p1.curveTo(cx + 220, 120, cx + 260, 280, cx + 170, bottomY);
-        p1.closePath();
-        g2.setPaint(new GradientPaint(cx - 120, 50, new Color(10, 45, 130), cx + 120, bottomY, new Color(0, 95, 210)));
-        g2.fill(p1);
-
-        Path2D.Double p2 = new Path2D.Double();
-        p2.moveTo(cx - 170, bottomY);
-        p2.curveTo(cx - 250, 150, cx - 70, 90, cx + 60, 130);
-        p2.curveTo(cx + 200, 180, cx + 185, 330, cx + 85, bottomY);
-        p2.closePath();
-        g2.setPaint(new GradientPaint(cx - 100, 90, new Color(15, 115, 235), cx + 70, bottomY, new Color(0, 60, 175)));
-        g2.fill(p2);
-
-        Path2D.Double p3 = new Path2D.Double();
-        p3.moveTo(cx - 120, bottomY);
-        p3.curveTo(cx - 185, 190, cx - 15, 130, cx + 85, 170);
-        p3.curveTo(cx + 145, 220, cx + 120, 350, cx - 15, bottomY);
-        p3.closePath();
-        g2.setPaint(new GradientPaint(cx - 65, 130, new Color(75, 175, 255), cx + 45, bottomY, new Color(20, 110, 220)));
-        g2.fill(p3);
-
-        Path2D.Double p4 = new Path2D.Double();
-        p4.moveTo(cx - 70, bottomY);
-        p4.curveTo(cx - 125, 250, cx + 20, 190, cx + 90, 230);
-        p4.curveTo(cx + 125, 290, cx + 55, 370, cx - 10, bottomY);
-        p4.closePath();
-        g2.setPaint(new GradientPaint(cx - 25, 190, new Color(135, 210, 255), cx + 25, bottomY, new Color(40, 130, 240)));
-        g2.fill(p4);
-    }
-}
-
-// Draws the Windows 11 centered taskbar
-final class Win11Taskbar {
-    private static final int ICON_COUNT = 8;
-    private static final int ICON_SPACING = 36;
-    private static final int ICON_SIZE = 20;
-
-    private Win11Taskbar() {}
-
-    static void draw(Graphics2D g2) {
-        int y = Canvas.H - Canvas.TASKBAR_H;
-
-        g2.setColor(new Color(243, 243, 243, 235));
-        g2.fillRect(0, y, Canvas.W, Canvas.TASKBAR_H);
-        g2.setColor(new Color(225, 225, 225));
-        g2.fillRect(0, y, Canvas.W, 1);
-
-        int clusterW = ICON_COUNT * ICON_SPACING;
-        int startX = (Canvas.W - clusterW) / 2;
-        int iconY = y + (Canvas.TASKBAR_H - ICON_SIZE) / 2;
-
-        drawStartIcon(g2, startX, iconY);
-        drawSearchIcon(g2, startX + ICON_SPACING, iconY);
-        drawTaskViewIcon(g2, startX + ICON_SPACING * 2, iconY);
-        drawWidgetsIcon(g2, startX + ICON_SPACING * 3, iconY);
-        drawTeamsIcon(g2, startX + ICON_SPACING * 4, iconY);
-        drawFileExplorerIcon(g2, startX + ICON_SPACING * 5, iconY);
-        drawEdgeIcon(g2, startX + ICON_SPACING * 6, iconY);
-        drawStoreIcon(g2, startX + ICON_SPACING * 7, iconY);
-
-        g2.setColor(new Color(0, 103, 192));
-        g2.fill(new RoundRectangle2D.Double(startX + ICON_SPACING * 5 + 4, y + Canvas.TASKBAR_H - 3, 12, 2, 1, 1));
-
-        drawSystemTray(g2, y);
-    }
-
-    private static void drawStartIcon(Graphics2D g2, int x, int y) {
-        int s = 9;
-        g2.setColor(new Color(0, 120, 215));
-        g2.fill(new RoundRectangle2D.Double(x, y, s, s, 2, 2));
-        g2.fill(new RoundRectangle2D.Double(x + s + 2, y, s, s, 2, 2));
-        g2.fill(new RoundRectangle2D.Double(x, y + s + 2, s, s, 2, 2));
-        g2.fill(new RoundRectangle2D.Double(x + s + 2, y + s + 2, s, s, 2, 2));
-    }
-
-    private static void drawSearchIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(80, 80, 80));
-        g2.setStroke(new BasicStroke(1.8f));
-        g2.drawOval(x + 1, y + 1, 12, 12);
-        g2.drawLine(x + 10, y + 10, x + 16, y + 16);
-        g2.setStroke(new BasicStroke(1f));
-    }
-
-    private static void drawTaskViewIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(80, 80, 80));
-        g2.setStroke(new BasicStroke(1.5f));
-        g2.drawRoundRect(x + 1, y + 3, 10, 14, 2, 2);
-        g2.setColor(new Color(140, 140, 140));
-        g2.drawRoundRect(x + 6, y + 1, 10, 14, 2, 2);
-        g2.setStroke(new BasicStroke(1f));
-    }
-
-    private static void drawWidgetsIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(0, 120, 215));
-        g2.fillRoundRect(x + 1, y + 2, 8, 16, 2, 2);
-        g2.setColor(new Color(0, 164, 239));
-        g2.fillRoundRect(x + 10, y + 2, 8, 16, 2, 2);
-    }
-
-    private static void drawTeamsIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(75, 70, 185));
-        g2.fillOval(x + 1, y + 1, 18, 18);
-        g2.setColor(Color.WHITE);
-        g2.setFont(new Font("Tahoma", Font.BOLD, 11));
-        g2.drawString("T", x + 6, y + 14);
-    }
-
-    private static void drawFileExplorerIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(245, 180, 35));
-        g2.fillRoundRect(x + 1, y + 4, 18, 13, 3, 3);
-        g2.setColor(new Color(0, 120, 215));
-        g2.fillRect(x + 4, y + 2, 7, 3);
-    }
-
-    private static void drawEdgeIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(15, 140, 205));
-        g2.fillOval(x + 1, y + 1, 18, 18);
-        g2.setColor(new Color(40, 200, 175));
-        g2.fillOval(x + 5, y + 5, 10, 10);
-    }
-
-    private static void drawStoreIcon(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(0, 120, 215));
-        g2.fillRoundRect(x + 2, y + 5, 16, 13, 2, 2);
-        g2.setStroke(new BasicStroke(1.5f));
-        g2.drawArc(x + 5, y + 1, 10, 8, 0, 180);
-        g2.setStroke(new BasicStroke(1f));
-    }
-
-    private static void drawSystemTray(Graphics2D g2, int taskbarY) {
-        int trayX = Canvas.W - 135;
-        g2.setColor(new Color(60, 60, 60));
-
-        g2.setFont(new Font("Tahoma", Font.PLAIN, 10));
-        g2.drawString("ENG", trayX, taskbarY + 21);
-
-        int iconX = trayX + 28;
-        g2.setStroke(new BasicStroke(1.2f));
-        g2.drawArc(iconX, taskbarY + 11, 11, 11, 45, 90);
-        g2.drawArc(iconX + 2, taskbarY + 14, 7, 7, 45, 90);
-        g2.setStroke(new BasicStroke(1f));
-
-        String timeStr = LocalTime.now().format(DateTimeFormatter.ofPattern("12:11"));
-        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("15/10/2021"));
-
-        g2.setFont(new Font("Tahoma", Font.PLAIN, 10));
-        g2.drawString(timeStr, trayX + 48, taskbarY + 15);
-        g2.setFont(new Font("Tahoma", Font.PLAIN, 9));
-        g2.drawString(dateStr, trayX + 45, taskbarY + 26);
-
-        g2.setColor(new Color(0, 103, 192));
-        g2.fillOval(Canvas.W - 18, taskbarY + 11, 12, 12);
-        g2.setColor(Color.WHITE);
-        g2.setFont(new Font("Tahoma", Font.BOLD, 9));
-        g2.drawString("3", Canvas.W - 14, taskbarY + 20);
     }
 }
