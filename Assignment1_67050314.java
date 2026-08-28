@@ -24,7 +24,7 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         Assignment1_67050314 panel = new Assignment1_67050314();
         panel.setPreferredSize(new Dimension(Canvas.W, Canvas.H));
 
-        JFrame frame = new JFrame("Windows OS Transition Sequence");
+        JFrame frame = new JFrame("My Memories - 67050314");
         frame.add(panel);
         frame.setResizable(false);
         frame.pack();
