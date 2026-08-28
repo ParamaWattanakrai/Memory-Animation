@@ -17,5 +17,5 @@ java TextMorphDemo.java
 2. Completeness of Code (20)
 3. Readibility (10)
 4. Dedication (15)
-5. Referencs (5)
+5. References (5)
 6. Popular Vote (10)

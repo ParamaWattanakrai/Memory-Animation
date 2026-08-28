@@ -1,5 +1,4 @@
 import java.awt.*;
-import java.awt.event.*;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 import java.time.LocalDate;
@@ -16,16 +15,8 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
             new BufferedImage(Canvas.W + 1, Canvas.H + 1, BufferedImage.TYPE_INT_ARGB);
 
     private double totalTime = 0;
-    private int mouseX = 0, mouseY = 0;
 
     public Assignment1_67050314() {
-        addMouseMotionListener(new MouseMotionAdapter() {
-            @Override
-            public void mouseMoved(MouseEvent e) {
-                mouseX = e.getX();
-                mouseY = e.getY();
-            }
-        });
     }
 
     public static void main(String[] args) {
@@ -69,7 +60,6 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         SceneRenderer.render(g2, totalTime);
-        DebugOverlay.draw(g2, mouseX, mouseY, totalTime);
         g2.dispose();
 
         g.drawImage(frameBuffer, 0, 0, null);
@@ -238,25 +228,6 @@ final class RetroExplosion {
 
     private static int clampToByte(double value) {
         return Math.max(0, Math.min(255, (int) value));
-    }
-}
-
-final class DebugOverlay {
-
-    private DebugOverlay() {}
-
-    static void draw(Graphics2D g2, int mouseX, int mouseY, double totalTime) {
-        g2.setColor(Color.BLACK);
-        g2.fillRect(5, 5, 130, 45);
-        g2.setColor(Color.GREEN);
-        g2.drawRect(5, 5, 130, 45);
-        g2.setFont(new Font("Monospaced", Font.BOLD, 14));
-        g2.drawString("X: " + mouseX + " Y: " + mouseY, 15, 23);
-        g2.drawString(String.format("Time: %.2fs", totalTime), 15, 40);
-
-        g2.setColor(Color.RED);
-        g2.drawLine(mouseX - 10, mouseY, mouseX + 10, mouseY);
-        g2.drawLine(mouseX, mouseY - 10, mouseX, mouseY + 10);
     }
 }
 
