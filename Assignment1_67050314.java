@@ -7,29 +7,11 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 
-/**
- * Animates a looping "Windows XP -> Windows 7 -> Windows 11 -> Black Screen (Sahur) -> Windows XP"
- * sequence.
- *
- * <p>This class only owns the Swing plumbing (window setup, the animation clock, and the paint
- * callback). Everything about what gets drawn lives in the small, single-purpose classes below it
- * in this file:
- * <ul>
- *   <li>{@link Timeline} - when each scene/transition starts</li>
- *   <li>{@link SceneRenderer} - picks the right scene (or transition) for the current time</li>
- *   <li>{@link XPScene}, {@link Win7Scene}, {@link Win11Scene}, {@link BlackScene} - the four scenes</li>
- *   <li>{@link Transitions}, {@link RetroExplosion} - the circular-wipe transition effect</li>
- *   <li>{@link DrawUtils}, {@link WindowChrome}, {@link DebugOverlay} - shared drawing helpers</li>
- * </ul>
- * They're kept in one file for easy single-file submission, but each is independent enough to be
- * moved into its own file with no changes if the project ever grows.
- */
 public class Assignment1_67050314 extends JPanel implements Runnable {
 
     private static final int TARGET_FPS = 60;
     private static final long FRAME_TIME_MS = 1000 / TARGET_FPS;
 
-    // Reused every frame instead of allocating a new BufferedImage 60 times a second.
     private final BufferedImage frameBuffer =
             new BufferedImage(Canvas.W + 1, Canvas.H + 1, BufferedImage.TYPE_INT_ARGB);
 
@@ -94,46 +76,32 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     }
 }
 
-/** Canvas size and window-chrome dimensions shared by every scene. */
 final class Canvas {
     static final int W = 600, H = 600;
     static final int TASKBAR_H = 34;
-    static final int WIN11_TASKBAR_H = 48;
     static final int TITLE_BAR_H = 30;
 
     private Canvas() {}
 }
 
-/**
- * The animation's schedule: when each scene starts and how long transitions last. All values are
- * seconds elapsed since the loop began. Change a duration here and every dependent scene start
- * shifts automatically.
- */
 final class Timeline {
     static final double TRANSITION_DURATION = 2.0;
 
-    static final double XP_END = 5.0;                                            // XP scene: 0s -> 5s
-    static final double WIN7_START = XP_END + TRANSITION_DURATION;                // 7.0s
-    static final double WIN7_TO_WIN11_START = WIN7_START + 4.0;                   // 11.0s
-    static final double WIN11_START = WIN7_TO_WIN11_START + TRANSITION_DURATION;  // 13.0s
-    static final double WIN11_TO_BLACK_START = WIN11_START + 1.5;                 // 14.5s
-    static final double BLACK_START = WIN11_TO_BLACK_START + TRANSITION_DURATION; // 16.5s
-    static final double BLACK_TO_XP_START = BLACK_START + 5.5;                    // 22.0s (extra read time)
-    static final double LOOP_DURATION = BLACK_TO_XP_START + TRANSITION_DURATION;  // 24.0s total
+    static final double XP_END = 5.0;
+    static final double WIN7_START = XP_END + TRANSITION_DURATION;
+    static final double WIN7_TO_WIN11_START = WIN7_START + 4.0;
+    static final double WIN11_START = WIN7_TO_WIN11_START + TRANSITION_DURATION;
+    static final double WIN11_TO_BLACK_START = WIN11_START + 1.5;
+    static final double BLACK_START = WIN11_TO_BLACK_START + TRANSITION_DURATION;
+    static final double BLACK_TO_XP_START = BLACK_START + 5.5;
+    static final double LOOP_DURATION = BLACK_TO_XP_START + TRANSITION_DURATION;
 
-    // Content that fades in partway through a scene.
     static final double MINECRAFT_WINDOW_APPEAR_AT = WIN7_START + 1.0;
     static final double DIALOG_BOX_APPEAR_AT = BLACK_START + 0.8;
-
-    // The Win7->Win11 transition has no natural "explosion point" like Minesweeper does, so its
-    // origin is just a fixed spot on screen.
-    static final int WIN7_TO_WIN11_ORIGIN_X = 298;
-    static final int WIN7_TO_WIN11_ORIGIN_Y = 205;
 
     private Timeline() {}
 }
 
-/** Looks at the current time and dispatches to whichever scene (or transition) should be on screen. */
 final class SceneRenderer {
 
     private SceneRenderer() {}
@@ -151,8 +119,9 @@ final class SceneRenderer {
             Win7Scene.draw(g2, t);
 
         } else if (t < Timeline.WIN11_START) {
+            Point origin = Win7MinecraftWindow.explosionOrigin();
             Transitions.explosive(g2, t, Timeline.WIN7_TO_WIN11_START,
-                    Timeline.WIN7_TO_WIN11_ORIGIN_X, Timeline.WIN7_TO_WIN11_ORIGIN_Y,
+                    origin.x, origin.y,
                     () -> Win7Scene.draw(g2, t), () -> Win11Scene.draw(g2, t));
 
         } else if (t < Timeline.WIN11_TO_BLACK_START) {
@@ -166,18 +135,12 @@ final class SceneRenderer {
             BlackScene.draw(g2, t);
 
         } else {
-            // Circular wipe expanding from screen center back into an empty Windows XP desktop.
             Transitions.plain(g2, t, Timeline.BLACK_TO_XP_START, Canvas.W / 2, Canvas.H / 2,
                     () -> BlackScene.draw(g2, t), () -> XPScene.draw(g2, t, false));
         }
     }
 }
 
-/**
- * Draws a circular "wipe" from one scene to the next, expanding outward from an origin point.
- * {@link #explosive} additionally layers a retro shockwave burst on top, for transitions that
- * represent something detonating (the Minesweeper mine, the Win7 logo).
- */
 final class Transitions {
 
     private Transitions() {}
@@ -193,7 +156,6 @@ final class Transitions {
         circularWipe(g2, t, phaseStart, originX, originY, oldScene, newScene);
     }
 
-    /** Returns transition progress in [0, 1] (approximately) so callers can layer effects on top. */
     private static double circularWipe(Graphics2D g2, double t, double phaseStart, int originX, int originY,
                                         Runnable oldScene, Runnable newScene) {
         double progress = (t - phaseStart) / Timeline.TRANSITION_DURATION;
@@ -211,11 +173,10 @@ final class Transitions {
     }
 }
 
-/** The white-hot ring, blast core, and spark rays layered over an "explosive" transition. */
 final class RetroExplosion {
     private static final int RAY_COUNT = 24;
     private static final double RAY_ANGLE_STEP_DEG = 15;
-    private static final double RAY_ANGLE_JITTER_DEG = 7; // alternating rays are offset for a less uniform burst
+    private static final double RAY_ANGLE_JITTER_DEG = 7;
 
     private RetroExplosion() {}
 
@@ -280,7 +241,6 @@ final class RetroExplosion {
     }
 }
 
-/** Small HUD in the corner showing the mouse position and elapsed loop time, plus a cursor crosshair. */
 final class DebugOverlay {
 
     private DebugOverlay() {}
@@ -300,7 +260,6 @@ final class DebugOverlay {
     }
 }
 
-/** Polygon and circle fill helpers reused by the desktop wallpapers and character artwork. */
 final class DrawUtils {
 
     private DrawUtils() {}
@@ -310,7 +269,6 @@ final class DrawUtils {
         g2.fillPolygon(xs, ys, xs.length);
     }
 
-    /** Fills a polygon defined by offsets from ({@code cx}, {@code cy}), scaled by {@code scale}. */
     static void fillPolyRelative(Graphics2D g2, Color color, int cx, int cy, int[] dx, int[] dy, double scale) {
         int[] xs = new int[dx.length];
         int[] ys = new int[dy.length];
@@ -321,7 +279,6 @@ final class DrawUtils {
         fillPoly(g2, color, xs, ys);
     }
 
-    /** Midpoint-circle algorithm, filled via symmetric scanlines (keeps the original pixel-art look). */
     static void fillMidpointCircle(Graphics2D g2, int cx, int cy, int radius, Color color) {
         g2.setColor(color);
         int x = 0, y = radius, p = 1 - radius;
@@ -347,7 +304,6 @@ final class DrawUtils {
     }
 }
 
-/** The rounded "Luna" style window used by every XP-era window (notes and Minesweeper alike). */
 final class WindowChrome {
 
     private WindowChrome() {}
@@ -398,14 +354,12 @@ final class WindowChrome {
         int bw = 22, bh = 22, gap = 2;
         int minimizeX = x + w - (bw * 3 + gap * 2) - 6, buttonY = y + 4;
 
-        // Minimize
         g2.setPaint(new GradientPaint(minimizeX, buttonY, new Color(80, 160, 255),
                 minimizeX, buttonY + bh, new Color(30, 100, 220)));
         g2.fill(new RoundRectangle2D.Double(minimizeX, buttonY, bw, bh, 4, 4));
         g2.setColor(Color.WHITE);
         g2.fillRect(minimizeX + 6, buttonY + bh - 7, bw - 12, 3);
 
-        // Maximize
         int maximizeX = minimizeX + bw + gap;
         g2.setPaint(new GradientPaint(maximizeX, buttonY, new Color(80, 160, 255),
                 maximizeX, buttonY + bh, new Color(30, 100, 220)));
@@ -416,7 +370,6 @@ final class WindowChrome {
         g2.fillRect(maximizeX + 6, buttonY + 6, bw - 12, 3);
         g2.setStroke(new BasicStroke(1f));
 
-        // Close
         int closeX = maximizeX + bw + gap;
         g2.setPaint(new GradientPaint(closeX, buttonY, new Color(240, 100, 80),
                 closeX, buttonY + bh, new Color(210, 40, 30)));
@@ -429,7 +382,6 @@ final class WindowChrome {
     }
 }
 
-/** The Windows XP desktop: rolling-hills wallpaper, two "memory" note windows, Minesweeper, and the taskbar. */
 final class XPScene {
     private static final Rectangle NOTES_WINDOW_1 = new Rectangle(40, 45, 290, 190);
     private static final Rectangle NOTES_WINDOW_2 = new Rectangle(80, 110, 290, 190);
@@ -440,7 +392,6 @@ final class XPScene {
 
     private XPScene() {}
 
-    /** @param showWindows false for the empty "after loop" desktop shown right after the black screen */
     static void draw(Graphics2D g2, double t, boolean showWindows) {
         drawDesktop(g2);
 
@@ -545,7 +496,6 @@ final class XPScene {
     }
 }
 
-/** The taskbar at the bottom of the Windows XP desktop, including the clock. */
 final class XPTaskbar {
 
     private XPTaskbar() {}
@@ -609,11 +559,6 @@ final class XPTaskbar {
     }
 }
 
-/**
- * A scripted (non-interactive) game of Minesweeper: starts intact, opens a patch of safe cells,
- * then detonates a mine. {@link #explosionOrigin()} shares the same grid geometry as {@link #draw}
- * so the XP->Win7 transition explodes from exactly the cell that was drawn as hit.
- */
 final class MinesweeperWidget {
     static final Rectangle WINDOW_BOUNDS = new Rectangle(295, 210, 280, 340);
 
@@ -631,13 +576,8 @@ final class MinesweeperWidget {
     private static final double EXPLODE_AT = 4.3;
 
     private static final int HIT_MINE_COL = 8, HIT_MINE_ROW = 4;
-    // One cell (col 3, row 2) is chorded open a beat later than the rest of the patch.
     private static final int LATE_REVEAL_COL = 3, LATE_REVEAL_ROW = 2;
 
-    // {col, row, revealedValue} - the patch of cells opened once the minesweeper "clicks".
-    // This is a real flood-fill closure: every 0-value cell here has ALL 8 neighbors also
-    // present in this list (auto-cascading, exactly like real Minesweeper), and every value
-    // is the true count of mines adjacent to that cell given MINE_CELLS below.
     private static final int[][] REVEALED_CELLS = {
             {2, 0, 1}, {3, 0, 0}, {4, 0, 0}, {5, 0, 0}, {6, 0, 0}, {7, 0, 0}, {8, 0, 0},
             {2, 1, 2}, {3, 1, 1}, {4, 1, 1}, {5, 1, 1}, {6, 1, 0}, {7, 1, 1}, {8, 1, 1},
@@ -679,7 +619,6 @@ final class MinesweeperWidget {
         return STEP_EXPLODED;
     }
 
-    /** The board's on-screen geometry, computed once and shared between drawing and explosion targeting. */
     private static Grid computeGrid() {
         Rectangle b = WINDOW_BOUNDS;
         int panelX = b.x + 12;
@@ -803,7 +742,6 @@ final class MinesweeperWidget {
         return false;
     }
 
-    /** Returns the shown number for a revealed cell, or {@link #NOT_REVEALED} if it's still closed. */
     private static int revealedValueAt(int col, int row, int gameStep) {
         if (gameStep < STEP_PARTIAL_REVEAL) return NOT_REVEALED;
 
@@ -877,7 +815,6 @@ final class MinesweeperWidget {
         g2.setStroke(new BasicStroke(1f));
     }
 
-    /** The board's screen-space geometry: top-left corner, overall size, and per-cell size. */
     private static final class Grid {
         final int x, y, width, height, cellW, cellH;
 
@@ -895,7 +832,6 @@ final class MinesweeperWidget {
     }
 }
 
-/** The Windows 7 "Aurora" desktop with a floating Minecraft window and the glassy taskbar. */
 final class Win7Scene {
 
     private Win7Scene() {}
@@ -996,7 +932,6 @@ final class Win7Scene {
     }
 }
 
-/** The glassy Windows 7 taskbar with its glowing orb start button. */
 final class Win7Taskbar {
 
     private Win7Taskbar() {}
@@ -1064,13 +999,21 @@ final class Win7Taskbar {
     }
 }
 
-/** The floating "Minecraft" window shown inside the Windows 7 scene: glassy Aero chrome plus its interior scene. */
 final class Win7MinecraftWindow {
     static final Rectangle WINDOW_BOUNDS = new Rectangle(70, 40, 460, 380);
     private static final int TITLE_H = 30;
     private static final int BORDER = 7;
 
     private Win7MinecraftWindow() {}
+
+    static Point explosionOrigin() {
+        Rectangle b = WINDOW_BOUNDS;
+        int clientX = b.x + BORDER;
+        int clientY = b.y + TITLE_H;
+        int clientW = b.width - BORDER * 2;
+        int clientH = b.height - TITLE_H - BORDER;
+        return MinecraftScene.creeperOrigin(clientX, clientY, clientW, clientH);
+    }
 
     static void draw(Graphics2D g2, double t) {
         Rectangle b = WINDOW_BOUNDS;
@@ -1088,7 +1031,7 @@ final class Win7MinecraftWindow {
 
         g2.setColor(new Color(15, 25, 40));
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        g2.drawString("Minecraft 1.2.5 - Singleplayer", b.x + 12, b.y + 20);
+        g2.drawString("Minecraft 1.5.2 - Singleplayer", b.x + 12, b.y + 20);
 
         drawTitleBarButtons(g2, b);
 
@@ -1135,10 +1078,15 @@ final class Win7MinecraftWindow {
     }
 }
 
-/** The little animated Minecraft-style scene shown inside {@link Win7MinecraftWindow}: beach, house, and a creeper. */
 final class MinecraftScene {
 
     private MinecraftScene() {}
+
+    static Point creeperOrigin(int cx, int cy, int cw, int ch) {
+        int crx = cx + cw / 2 - 22;
+        int cry = cy + 95;
+        return new Point(crx + 20, cry + 20);
+    }
 
     static void draw(Graphics2D g2, int cx, int cy, int cw, int ch, double t) {
         drawSky(g2, cx, cy, cw, ch);
@@ -1178,7 +1126,7 @@ final class MinecraftScene {
     }
 
     private static void drawHouse(Graphics2D g2, int cx, int cy, int cw) {
-        int hx = cx + cw - 120, hy = cy + 70; // sits on the sand ground
+        int hx = cx + cw - 120, hy = cy + 70;
         g2.setColor(new Color(110, 75, 35));
         g2.fillRect(hx, hy, 90, 70);
         g2.setColor(new Color(70, 50, 25));
@@ -1324,11 +1272,6 @@ final class MinecraftScene {
     }
 }
 
-/**
- * The "Sahur" character illustration used on the black screen. The point arrays below are
- * hand-tuned artwork coordinates (offsets from the character's center) rather than meaningful
- * named values, so they're kept as data rather than split into individually-named constants.
- */
 final class SahurCharacter {
     private static final Color BASE = new Color(175, 107, 50);
     private static final Color SHADOW = new Color(110, 50, 10);
@@ -1384,7 +1327,7 @@ final class SahurCharacter {
         poly(g2, Color.WHITE, cx, cy, scale, new int[]{-30, -25, -26, -31}, new int[]{-155, -158, -152, -150});
 
         poly(g2, DARK, cx, cy, scale, new int[]{5, 25, 40, 35, 15, 0}, new int[]{-185, -190, -165, -140, -135, -160});
-        poly(g2, EYE, cx, cy, scale, new int[]{10, 25, 35, 30, 15, 5}, new int[]{-180, -185, -165, -145, -140, -160});
+        poly(g2, EYE, cx, cy, scale, new int[]{10, 25, 35, 30, 15, 5}, new int[]{-180, -185, -165, -140, -140, -160});
         poly(g2, DARK, cx, cy, scale, new int[]{20, 30, 33, 25, 17}, new int[]{-172, -175, -162, -158, -162});
         poly(g2, Color.WHITE, cx, cy, scale, new int[]{23, 27, 26, 22}, new int[]{-168, -170, -165, -163});
     }
@@ -1410,7 +1353,6 @@ final class SahurCharacter {
     }
 }
 
-/** A speech-bubble style dialog box with a drop shadow and a tail, used for Sahur's monologue. */
 final class DialogBox {
 
     private DialogBox() {}
@@ -1461,10 +1403,9 @@ final class DialogBox {
     }
 }
 
-/** The black "credits" screen: Sahur delivers his line once the dialog box fades in. */
 final class BlackScene {
     private static final int SAHUR_X = 140, SAHUR_Y = 470;
-    private static final double SAHUR_SCALE = 1.25; // positioned lower-left and drawn larger than life-size
+    private static final double SAHUR_SCALE = 1.25;
 
     private static final String MONOLOGUE =
             "You brought me into the world\nagainst my will.\nAnd for doing my job,\nyou call me a monster?";
@@ -1483,7 +1424,6 @@ final class BlackScene {
     }
 }
 
-/** The Windows 11 desktop: a soft gradient sky with layered "bloom petal" shapes, plus its taskbar. */
 final class Win11Scene {
 
     private Win11Scene() {}
@@ -1511,7 +1451,7 @@ final class Win11Scene {
 
     private static void drawBloomPetals(Graphics2D g2) {
         int cx = Canvas.W / 2;
-        int bottomY = Canvas.H - Canvas.WIN11_TASKBAR_H;
+        int bottomY = Canvas.H - Canvas.TASKBAR_H;
 
         Path2D.Double p1 = new Path2D.Double();
         p1.moveTo(cx - 215, bottomY);
@@ -1547,24 +1487,24 @@ final class Win11Scene {
     }
 }
 
-/** The centered Windows 11 taskbar, its icon cluster, and the system tray. */
 final class Win11Taskbar {
     private static final int ICON_COUNT = 8;
-    private static final int ICON_SPACING = 38;
+    private static final int ICON_SPACING = 36;
+    private static final int ICON_SIZE = 20;
 
     private Win11Taskbar() {}
 
     static void draw(Graphics2D g2) {
-        int y = Canvas.H - Canvas.WIN11_TASKBAR_H;
+        int y = Canvas.H - Canvas.TASKBAR_H;
 
         g2.setColor(new Color(243, 243, 243, 235));
-        g2.fillRect(0, y, Canvas.W, Canvas.WIN11_TASKBAR_H);
+        g2.fillRect(0, y, Canvas.W, Canvas.TASKBAR_H);
         g2.setColor(new Color(225, 225, 225));
         g2.fillRect(0, y, Canvas.W, 1);
 
         int clusterW = ICON_COUNT * ICON_SPACING;
         int startX = (Canvas.W - clusterW) / 2;
-        int iconY = y + (Canvas.WIN11_TASKBAR_H - 24) / 2;
+        int iconY = y + (Canvas.TASKBAR_H - ICON_SIZE) / 2;
 
         drawStartIcon(g2, startX, iconY);
         drawSearchIcon(g2, startX + ICON_SPACING, iconY);
@@ -1576,13 +1516,13 @@ final class Win11Taskbar {
         drawStoreIcon(g2, startX + ICON_SPACING * 7, iconY);
 
         g2.setColor(new Color(0, 103, 192));
-        g2.fill(new RoundRectangle2D.Double(startX + ICON_SPACING * 5 + 4, y + Canvas.WIN11_TASKBAR_H - 4, 16, 3, 2, 2));
+        g2.fill(new RoundRectangle2D.Double(startX + ICON_SPACING * 5 + 4, y + Canvas.TASKBAR_H - 3, 12, 2, 1, 1));
 
         drawSystemTray(g2, y);
     }
 
     private static void drawStartIcon(Graphics2D g2, int x, int y) {
-        int s = 10;
+        int s = 9;
         g2.setColor(new Color(0, 120, 215));
         g2.fill(new RoundRectangle2D.Double(x, y, s, s, 2, 2));
         g2.fill(new RoundRectangle2D.Double(x + s + 2, y, s, s, 2, 2));
@@ -1593,83 +1533,82 @@ final class Win11Taskbar {
     private static void drawSearchIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(80, 80, 80));
         g2.setStroke(new BasicStroke(1.8f));
-        g2.drawOval(x + 2, y + 2, 13, 13);
-        g2.drawLine(x + 12, y + 12, x + 19, y + 19);
+        g2.drawOval(x + 1, y + 1, 12, 12);
+        g2.drawLine(x + 10, y + 10, x + 16, y + 16);
         g2.setStroke(new BasicStroke(1f));
     }
 
     private static void drawTaskViewIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(80, 80, 80));
         g2.setStroke(new BasicStroke(1.5f));
-        g2.drawRoundRect(x + 2, y + 4, 12, 16, 3, 3);
+        g2.drawRoundRect(x + 1, y + 3, 10, 14, 2, 2);
         g2.setColor(new Color(140, 140, 140));
-        g2.drawRoundRect(x + 8, y + 2, 12, 16, 3, 3);
+        g2.drawRoundRect(x + 6, y + 1, 10, 14, 2, 2);
         g2.setStroke(new BasicStroke(1f));
     }
 
     private static void drawWidgetsIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(0, 120, 215));
-        g2.fillRoundRect(x + 2, y + 3, 9, 18, 3, 3);
+        g2.fillRoundRect(x + 1, y + 2, 8, 16, 2, 2);
         g2.setColor(new Color(0, 164, 239));
-        g2.fillRoundRect(x + 13, y + 3, 9, 18, 3, 3);
+        g2.fillRoundRect(x + 10, y + 2, 8, 16, 2, 2);
     }
 
     private static void drawTeamsIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(75, 70, 185));
-        g2.fillOval(x + 3, y + 3, 18, 18);
+        g2.fillOval(x + 1, y + 1, 18, 18);
         g2.setColor(Color.WHITE);
         g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        g2.drawString("T", x + 8, y + 16);
+        g2.drawString("T", x + 6, y + 14);
     }
 
     private static void drawFileExplorerIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(245, 180, 35));
-        g2.fillRoundRect(x + 2, y + 5, 20, 14, 4, 4);
+        g2.fillRoundRect(x + 1, y + 4, 18, 13, 3, 3);
         g2.setColor(new Color(0, 120, 215));
-        g2.fillRect(x + 5, y + 3, 8, 3);
+        g2.fillRect(x + 4, y + 2, 7, 3);
     }
 
     private static void drawEdgeIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(15, 140, 205));
-        g2.fillOval(x + 2, y + 2, 20, 20);
+        g2.fillOval(x + 1, y + 1, 18, 18);
         g2.setColor(new Color(40, 200, 175));
-        g2.fillOval(x + 6, y + 6, 12, 12);
+        g2.fillOval(x + 5, y + 5, 10, 10);
     }
 
     private static void drawStoreIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(0, 120, 215));
-        g2.fillRoundRect(x + 3, y + 6, 18, 15, 3, 3);
+        g2.fillRoundRect(x + 2, y + 5, 16, 13, 2, 2);
         g2.setStroke(new BasicStroke(1.5f));
-        g2.drawArc(x + 7, y + 2, 10, 8, 0, 180);
+        g2.drawArc(x + 5, y + 1, 10, 8, 0, 180);
         g2.setStroke(new BasicStroke(1f));
     }
 
     private static void drawSystemTray(Graphics2D g2, int taskbarY) {
-        int trayX = Canvas.W - 145;
+        int trayX = Canvas.W - 135;
         g2.setColor(new Color(60, 60, 60));
+
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        g2.drawString("ENG", trayX, taskbarY + 21);
 
-        g2.drawString("ENG", trayX, taskbarY + 20);
-        g2.drawString("TH", trayX + 2, taskbarY + 32);
-
-        int iconX = trayX + 30;
+        int iconX = trayX + 28;
         g2.setStroke(new BasicStroke(1.2f));
-        g2.drawArc(iconX, taskbarY + 16, 12, 12, 45, 90);
-        g2.drawArc(iconX + 2, taskbarY + 19, 8, 8, 45, 90);
+        g2.drawArc(iconX, taskbarY + 11, 11, 11, 45, 90);
+        g2.drawArc(iconX + 2, taskbarY + 14, 7, 7, 45, 90);
         g2.setStroke(new BasicStroke(1f));
 
         String timeStr = LocalTime.now().format(DateTimeFormatter.ofPattern("12:11"));
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("15/10/2021"));
 
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        g2.drawString(timeStr, trayX + 55, taskbarY + 20);
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
-        g2.drawString(dateStr, trayX + 52, taskbarY + 34);
+        g2.drawString(timeStr, trayX + 48, taskbarY + 15);
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 9));
+        g2.drawString(dateStr, trayX + 45, taskbarY + 26);
 
         g2.setColor(new Color(0, 103, 192));
-        g2.fillOval(Canvas.W - 22, taskbarY + 18, 12, 12);
+        g2.fillOval(Canvas.W - 18, taskbarY + 11, 12, 12);
         g2.setColor(Color.WHITE);
         g2.setFont(new Font("Segoe UI", Font.BOLD, 9));
-        g2.drawString("3", Canvas.W - 18, taskbarY + 27);
+        g2.drawString("3", Canvas.W - 14, taskbarY + 20);
     }
 }
