@@ -1,8 +1,161 @@
 import java.awt.*;
-import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import javax.swing.*;
+
+// Coordinate
+class Point2D {
+    double x, y;
+
+    Point2D(double x, double y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    double getX() { return x; }
+    double getY() { return y; }
+
+    static class Double extends Point2D {
+        Double(double x, double y) { super(x, y); }
+    }
+
+    static class Float extends Point2D {
+        Float(float x, float y) { super(x, y); }
+    }
+}
+
+// Does Affine Transform
+final class AffineTransform {
+    // Row-major 2x3 matrix
+    double m00 = 1, m01 = 0, m02 = 0;
+    double m10 = 0, m11 = 1, m12 = 0;
+
+    AffineTransform() {}
+
+    AffineTransform(AffineTransform other) {
+        this.m00 = other.m00; this.m01 = other.m01; this.m02 = other.m02;
+        this.m10 = other.m10; this.m11 = other.m11; this.m12 = other.m12;
+    }
+
+    // Appends a translation
+    void translate(double tx, double ty) {
+        concatenate(1, 0, 0, 1, tx, ty);
+    }
+
+    // Appends a scale
+    void scale(double sx, double sy) {
+        concatenate(sx, 0, 0, sy, 0, 0);
+    }
+
+    // Appends a rotation
+    void rotate(double theta) {
+        double c = Math.cos(theta), s = Math.sin(theta);
+        concatenate(c, s, -s, c, 0, 0);
+    }
+
+    // Composes this with an incremental (a,b,c,d,e,f) matrix
+    private void concatenate(double a, double b, double c, double d, double e, double f) {
+        double n00 = m00 * a + m01 * b, n01 = m00 * c + m01 * d, n02 = m00 * e + m01 * f + m02;
+        double n10 = m10 * a + m11 * b, n11 = m10 * c + m11 * d, n12 = m10 * e + m11 * f + m12;
+        m00 = n00; m01 = n01; m02 = n02;
+        m10 = n10; m11 = n11; m12 = n12;
+    }
+
+    // Maps a point through this transform
+    Point2D transform(Point2D src) {
+        double x = src.getX(), y = src.getY();
+        return new Point2D.Double(m00 * x + m01 * y + m02, m10 * x + m11 * y + m12);
+    }
+
+    // Maps a vector, ignoring translation
+    Point2D deltaTransform(Point2D src) {
+        double x = src.getX(), y = src.getY();
+        return new Point2D.Double(m00 * x + m01 * y, m10 * x + m11 * y);
+    }
+}
+
+// Path
+class Path2D {
+    static final int MOVE = 0, LINE = 1, QUAD = 2, CUBIC = 3, CLOSE = 4;
+
+    private final java.util.List<double[]> ops = new java.util.ArrayList<>();
+
+    void moveTo(double x, double y) { ops.add(new double[]{MOVE, x, y}); }
+    void lineTo(double x, double y) { ops.add(new double[]{LINE, x, y}); }
+    void quadTo(double cx, double cy, double x, double y) { ops.add(new double[]{QUAD, cx, cy, x, y}); }
+    void curveTo(double c1x, double c1y, double c2x, double c2y, double x, double y) {
+        ops.add(new double[]{CUBIC, c1x, c1y, c2x, c2y, x, y});
+    }
+    void closePath() { ops.add(new double[]{CLOSE}); }
+
+    java.util.List<double[]> ops() { return ops; }
+
+    static class Double extends Path2D {}
+}
+
+// Ellipse
+class Ellipse2D {
+    double x, y, width, height;
+
+    Ellipse2D(double x, double y, double w, double h) {
+        this.x = x; this.y = y; this.width = w; this.height = h;
+    }
+
+    // Used for our own clip test
+    boolean contains(double px, double py) {
+        if (width <= 0 || height <= 0) return false;
+        double cx = x + width / 2.0, cy = y + height / 2.0;
+        double nx = (px - cx) / (width / 2.0), ny = (py - cy) / (height / 2.0);
+        return nx * nx + ny * ny <= 1.0;
+    }
+
+    static class Double extends Ellipse2D {
+        Double(double x, double y, double w, double h) { super(x, y, w, h); }
+    }
+}
+
+// RoundRectangle
+class RoundRectangle2D {
+    double x, y, width, height, arcWidth, arcHeight;
+
+    RoundRectangle2D(double x, double y, double w, double h, double aw, double ah) {
+        this.x = x; this.y = y; this.width = w; this.height = h; this.arcWidth = aw; this.arcHeight = ah;
+    }
+
+    boolean contains(double px, double py) {
+        return px >= x && px < x + width && py >= y && py < y + height;
+    }
+
+    static class Double extends RoundRectangle2D {
+        Double(double x, double y, double w, double h, double aw, double ah) { super(x, y, w, h, aw, ah); }
+    }
+}
+
+// Rectangle
+class Rectangle2D {
+    double x, y, width, height;
+
+    Rectangle2D(double x, double y, double w, double h) {
+        this.x = x; this.y = y; this.width = w; this.height = h;
+    }
+
+    boolean contains(double px, double py) {
+        return px >= x && px < x + width && py >= y && py < y + height;
+    }
+
+    static class Double extends Rectangle2D {
+        Double(double x, double y, double w, double h) { super(x, y, w, h); }
+    }
+}
+
+// Combines two clip shapes
+final class ClipIntersection {
+    final Object a, b;
+
+    ClipIntersection(Object a, Object b) {
+        this.a = a; this.b = b;
+    }
+}
 
 public class Assignment1_67050314 extends JPanel implements Runnable {
 
@@ -75,6 +228,10 @@ final class Raster {
     private static int[] pixels;
     private static int width, height;
 
+    // Our own transform + clip state, not g2's
+    private static AffineTransform currentTransform = new AffineTransform();
+    private static Object currentClip = null;
+
     private Raster() {}
 
     static void setTarget(BufferedImage img) {
@@ -83,9 +240,57 @@ final class Raster {
         height = img.getHeight();
     }
 
-    // Wipes the buffer transparent
+    // Wipes the buffer transparent, resets transform + clip
     static void clear() {
         java.util.Arrays.fill(pixels, 0);
+        currentTransform = new AffineTransform();
+        currentClip = null;
+    }
+
+    // Our own transform stack
+
+    static AffineTransform getTransform() {
+        return new AffineTransform(currentTransform);
+    }
+
+    static void setTransform(AffineTransform t) {
+        currentTransform = new AffineTransform(t);
+    }
+
+    static void translate(double tx, double ty) {
+        currentTransform.translate(tx, ty);
+    }
+
+    static void scale(double sx, double sy) {
+        currentTransform.scale(sx, sy);
+    }
+
+    // Our own clip stack
+
+    static Object getClip() {
+        return currentClip;
+    }
+
+    static void setClip(Object clip) {
+        currentClip = clip;
+    }
+
+    // Intersects with the active clip
+    static void clip(Object shape) {
+        currentClip = (currentClip == null) ? shape : new ClipIntersection(currentClip, shape);
+    }
+
+    // Point-in-clip test
+    private static boolean containsClip(Object clip, double x, double y) {
+        if (clip == null) return true;
+        if (clip instanceof Ellipse2D) return ((Ellipse2D) clip).contains(x, y);
+        if (clip instanceof RoundRectangle2D) return ((RoundRectangle2D) clip).contains(x, y);
+        if (clip instanceof Rectangle2D) return ((Rectangle2D) clip).contains(x, y);
+        if (clip instanceof ClipIntersection) {
+            ClipIntersection ci = (ClipIntersection) clip;
+            return containsClip(ci.a, x, y) && containsClip(ci.b, x, y);
+        }
+        return true;
     }
 
     private static int clampByte(int v) {
@@ -97,8 +302,7 @@ final class Raster {
         if (c == null || x < 0 || y < 0 || x >= width || y >= height) return;
         int a = c.getAlpha();
         if (a <= 0) return;
-        Shape clip = g2.getClip();
-        if (clip != null && !clip.contains(x + 0.5, y + 0.5)) return;
+        if (!containsClip(currentClip, x + 0.5, y + 0.5)) return;
 
         int idx = y * width + x;
         if (a >= 255) {
@@ -129,14 +333,14 @@ final class Raster {
         }
     }
 
-    // User space -> device space, via g2's current transform
+    // User space -> device space, via our own current transform
     private static Point2D toDevice(Graphics2D g2, double x, double y) {
-        return g2.getTransform().transform(new Point2D.Double(x, y), null);
+        return currentTransform.transform(new Point2D.Double(x, y));
     }
 
-    // g2's current scale factor
+    // Our current scale factor
     private static double scaleFactor(Graphics2D g2) {
-        Point2D v = g2.getTransform().deltaTransform(new Point2D.Double(1, 0), null);
+        Point2D v = currentTransform.deltaTransform(new Point2D.Double(1, 0));
         return Math.hypot(v.getX(), v.getY());
     }
 
@@ -155,10 +359,12 @@ final class Raster {
     }
 
     private static Color sampleLinear(GradientPaint gp, double x, double y) {
-        Point2D p1 = gp.getPoint1(), p2 = gp.getPoint2();
-        double dx = p2.getX() - p1.getX(), dy = p2.getY() - p1.getY();
+        // GradientPaint hands back a real Point2D; read x/y out immediately
+        double p1x = gp.getPoint1().getX(), p1y = gp.getPoint1().getY();
+        double p2x = gp.getPoint2().getX(), p2y = gp.getPoint2().getY();
+        double dx = p2x - p1x, dy = p2y - p1y;
         double len2 = dx * dx + dy * dy;
-        double t = (len2 == 0) ? 0 : ((x - p1.getX()) * dx + (y - p1.getY()) * dy) / len2;
+        double t = (len2 == 0) ? 0 : ((x - p1x) * dx + (y - p1y) * dy) / len2;
         if (gp.isCyclic()) {
             t = t - 2 * Math.floor(t / 2);
             if (t > 1) t = 2 - t;
@@ -169,9 +375,10 @@ final class Raster {
     }
 
     private static Color sampleRadial(RadialGradientPaint rp, double x, double y) {
-        Point2D c = rp.getCenterPoint();
+        // Same deal as sampleLinear
+        double cx = rp.getCenterPoint().getX(), cy = rp.getCenterPoint().getY();
         float radius = rp.getRadius();
-        double t = (radius == 0) ? 0 : Math.min(1.0, Math.hypot(x - c.getX(), y - c.getY()) / radius);
+        double t = (radius == 0) ? 0 : Math.min(1.0, Math.hypot(x - cx, y - cy) / radius);
         float[] fractions = rp.getFractions();
         Color[] colors = rp.getColors();
         for (int i = 0; i < fractions.length - 1; i++) {
@@ -414,6 +621,146 @@ final class Raster {
         }
         fillPolygonDevice(g2, xs, ys, nPoints);
     }
+
+    // fill()/draw() for RoundRectangle2D
+
+    static void fill(Graphics2D g2, RoundRectangle2D r) {
+        fillRoundRect(g2, (int) Math.round(r.x), (int) Math.round(r.y),
+                (int) Math.round(r.width), (int) Math.round(r.height),
+                (int) Math.round(r.arcWidth), (int) Math.round(r.arcHeight));
+    }
+
+    static void draw(Graphics2D g2, RoundRectangle2D r) {
+        drawRoundRect(g2, (int) Math.round(r.x), (int) Math.round(r.y),
+                (int) Math.round(r.width), (int) Math.round(r.height),
+                (int) Math.round(r.arcWidth), (int) Math.round(r.arcHeight));
+    }
+
+    // fill()/draw() for Path2D
+
+    private static final int CURVE_STEPS = 24;
+
+    // Flattens path ops into line segments; fill implicitly closes subpaths, stroke doesn't
+    private static java.util.List<double[]> flattenPath(Path2D path, boolean forFill) {
+        java.util.List<double[]> edges = new java.util.ArrayList<>();
+        double curX = 0, curY = 0, startX = 0, startY = 0;
+        boolean subpathOpen = false;
+
+        for (double[] op : path.ops()) {
+            int type = (int) op[0];
+            switch (type) {
+                case Path2D.MOVE:
+                    if (subpathOpen && forFill) edges.add(new double[]{curX, curY, startX, startY});
+                    curX = op[1]; curY = op[2];
+                    startX = curX; startY = curY;
+                    subpathOpen = true;
+                    break;
+                case Path2D.LINE:
+                    edges.add(new double[]{curX, curY, op[1], op[2]});
+                    curX = op[1]; curY = op[2];
+                    subpathOpen = true;
+                    break;
+                case Path2D.QUAD:
+                    addFlattenedQuad(edges, curX, curY, op[1], op[2], op[3], op[4]);
+                    curX = op[3]; curY = op[4];
+                    subpathOpen = true;
+                    break;
+                case Path2D.CUBIC:
+                    addFlattenedCubic(edges, curX, curY, op[1], op[2], op[3], op[4], op[5], op[6]);
+                    curX = op[5]; curY = op[6];
+                    subpathOpen = true;
+                    break;
+                case Path2D.CLOSE:
+                    edges.add(new double[]{curX, curY, startX, startY});
+                    curX = startX; curY = startY;
+                    subpathOpen = false;
+                    break;
+            }
+        }
+        if (subpathOpen && forFill) edges.add(new double[]{curX, curY, startX, startY});
+        return edges;
+    }
+
+    private static void addFlattenedQuad(java.util.List<double[]> edges, double x0, double y0,
+                                          double cx, double cy, double x1, double y1) {
+        double px = x0, py = y0;
+        for (int i = 1; i <= CURVE_STEPS; i++) {
+            double t = (double) i / CURVE_STEPS;
+            double mt = 1 - t;
+            double x = mt * mt * x0 + 2 * mt * t * cx + t * t * x1;
+            double y = mt * mt * y0 + 2 * mt * t * cy + t * t * y1;
+            edges.add(new double[]{px, py, x, y});
+            px = x; py = y;
+        }
+    }
+
+    private static void addFlattenedCubic(java.util.List<double[]> edges, double x0, double y0,
+                                           double c1x, double c1y, double c2x, double c2y,
+                                           double x1, double y1) {
+        double px = x0, py = y0;
+        for (int i = 1; i <= CURVE_STEPS; i++) {
+            double t = (double) i / CURVE_STEPS;
+            double mt = 1 - t;
+            double x = mt * mt * mt * x0 + 3 * mt * mt * t * c1x + 3 * mt * t * t * c2x + t * t * t * x1;
+            double y = mt * mt * mt * y0 + 3 * mt * mt * t * c1y + 3 * mt * t * t * c2y + t * t * t * y1;
+            edges.add(new double[]{px, py, x, y});
+            px = x; py = y;
+        }
+    }
+
+    // Maps edges into device space
+    private static java.util.List<double[]> edgesToDevice(Graphics2D g2, java.util.List<double[]> edges) {
+        java.util.List<double[]> out = new java.util.ArrayList<>(edges.size());
+        for (double[] e : edges) {
+            Point2D p1 = toDevice(g2, e[0], e[1]);
+            Point2D p2 = toDevice(g2, e[2], e[3]);
+            out.add(new double[]{p1.getX(), p1.getY(), p2.getX(), p2.getY()});
+        }
+        return out;
+    }
+
+    // Scanline fill over an edge list
+    private static void fillEdgesDevice(Graphics2D g2, java.util.List<double[]> edges) {
+        if (edges.isEmpty()) return;
+        double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
+        for (double[] e : edges) {
+            minY = Math.min(minY, Math.min(e[1], e[3]));
+            maxY = Math.max(maxY, Math.max(e[1], e[3]));
+        }
+        int y0 = (int) Math.floor(minY), y1 = (int) Math.ceil(maxY);
+
+        java.util.List<Double> xs = new java.util.ArrayList<>();
+        for (int y = y0; y <= y1; y++) {
+            xs.clear();
+            for (double[] e : edges) {
+                double x1 = e[0], yy1 = e[1], x2 = e[2], yy2 = e[3];
+                if ((yy1 <= y && yy2 > y) || (yy2 <= y && yy1 > y)) {
+                    xs.add(x1 + (y - yy1) / (yy2 - yy1) * (x2 - x1));
+                }
+            }
+            java.util.Collections.sort(xs);
+            for (int i = 0; i + 1 < xs.size(); i += 2) {
+                int xStart = (int) Math.round(xs.get(i));
+                int xEnd = (int) Math.round(xs.get(i + 1));
+                for (int x = xStart; x <= xEnd; x++) plotDevice(g2, x, y, colorAt(g2, x, y));
+            }
+        }
+    }
+
+    static void fill(Graphics2D g2, Path2D path) {
+        java.util.List<double[]> edges = edgesToDevice(g2, flattenPath(path, true));
+        fillEdgesDevice(g2, edges);
+    }
+
+    static void draw(Graphics2D g2, Path2D path) {
+        java.util.List<double[]> edges = edgesToDevice(g2, flattenPath(path, false));
+        float lw = strokeWidth(g2) * (float) scaleFactor(g2);
+        Color c = g2.getColor();
+        for (double[] e : edges) {
+            bresenham(g2, (int) Math.round(e[0]), (int) Math.round(e[1]),
+                    (int) Math.round(e[2]), (int) Math.round(e[3]), lw, c);
+        }
+    }
 }
 
 // Canvas Properties
@@ -513,10 +860,10 @@ final class Transitions {
         oldScene.run();
 
         // Draw the new scene, showing the part inside the circle
-        Shape savedClip = g2.getClip();
-        g2.setClip(new Ellipse2D.Double(originX - radius, originY - radius, radius * 2, radius * 2));
+        Object savedClip = Raster.getClip();
+        Raster.setClip(new Ellipse2D.Double(originX - radius, originY - radius, radius * 2, radius * 2));
         newScene.run();
-        g2.setClip(savedClip);
+        Raster.setClip(savedClip);
 
         return progress;
     }
@@ -555,7 +902,7 @@ final class Explosion {
         if (coreRadius <= 0) return;
 
         RadialGradientPaint blastGradient = new RadialGradientPaint(
-                new Point2D.Float(cx, cy), coreRadius + 1f,
+                new java.awt.geom.Point2D.Float(cx, cy), coreRadius + 1f,
                 new float[]{0.0f, 0.2f, 0.6f, 1.0f},
                 new Color[]{
                         new Color(255, 255, 255, alpha),
@@ -764,17 +1111,17 @@ final class WindowChrome {
     static void draw(Graphics2D g2, int x, int y, int w, int h, Color bodyColor, String title) {
         // Draw a shadow behind the window
         g2.setColor(new Color(0, 0, 0, 60));
-        g2.fill(new RoundRectangle2D.Double(x + 6, y + 6, w, h, 12, 12));
+        Raster.fill(g2, new RoundRectangle2D.Double(x + 6, y + 6, w, h, 12, 12));
 
         // Fill in the window's background color
         g2.setColor(bodyColor);
-        g2.fill(new RoundRectangle2D.Double(x, y, w, h, 12, 12));
+        Raster.fill(g2, new RoundRectangle2D.Double(x, y, w, h, 12, 12));
 
         drawTitleBar(g2, x, y, w);
 
         // Draw a light-colored outline around the window
         g2.setColor(new Color(255, 255, 255, 100));
-        g2.draw(new RoundRectangle2D.Double(x + 1, y + 1, w - 2, h - 2, 10, 10));
+        Raster.draw(g2, new RoundRectangle2D.Double(x + 1, y + 1, w - 2, h - 2, 10, 10));
 
         drawControlButtons(g2, x, y, w);
 
@@ -800,7 +1147,7 @@ final class WindowChrome {
         titleBar.quadTo(x + w, y, x + w, y + 10);
         titleBar.lineTo(x + w, y + Canvas.TITLE_BAR_H);
         titleBar.closePath();
-        g2.fill(titleBar);
+        Raster.fill(g2, titleBar);
         g2.setPaint(null);
     }
 
@@ -811,14 +1158,14 @@ final class WindowChrome {
 
         g2.setPaint(new GradientPaint(minimizeX, buttonY, new Color(80, 160, 255),
                 minimizeX, buttonY + bh, new Color(30, 100, 220)));
-        g2.fill(new RoundRectangle2D.Double(minimizeX, buttonY, bw, bh, 4, 4));
+        Raster.fill(g2, new RoundRectangle2D.Double(minimizeX, buttonY, bw, bh, 4, 4));
         g2.setColor(Color.WHITE);
         Raster.fillRect(g2, minimizeX + 6, buttonY + bh - 7, bw - 12, 3);
 
         int maximizeX = minimizeX + bw + gap;
         g2.setPaint(new GradientPaint(maximizeX, buttonY, new Color(80, 160, 255),
                 maximizeX, buttonY + bh, new Color(30, 100, 220)));
-        g2.fill(new RoundRectangle2D.Double(maximizeX, buttonY, bw, bh, 4, 4));
+        Raster.fill(g2, new RoundRectangle2D.Double(maximizeX, buttonY, bw, bh, 4, 4));
         g2.setColor(Color.WHITE);
         g2.setStroke(new BasicStroke(2f));
         Raster.drawRect(g2, maximizeX + 6, buttonY + 6, bw - 12, bh - 12);
@@ -828,7 +1175,7 @@ final class WindowChrome {
         int closeX = maximizeX + bw + gap;
         g2.setPaint(new GradientPaint(closeX, buttonY, new Color(240, 100, 80),
                 closeX, buttonY + bh, new Color(210, 40, 30)));
-        g2.fill(new RoundRectangle2D.Double(closeX, buttonY, bw, bh, 4, 4));
+        Raster.fill(g2, new RoundRectangle2D.Double(closeX, buttonY, bw, bh, 4, 4));
         g2.setColor(Color.WHITE);
         g2.setStroke(new BasicStroke(2f));
         Raster.drawLine(g2, closeX + 7, buttonY + 7, closeX + bw - 7, buttonY + bh - 7);
@@ -870,14 +1217,14 @@ final class XPTaskbar {
     private static void drawStartButton(Graphics2D g2, int y) {
         RoundRectangle2D.Double startBtn = new RoundRectangle2D.Double(0, y, 105, Canvas.TASKBAR_H, 15, 15);
         g2.setPaint(new GradientPaint(0, y, new Color(80, 180, 70), 0, Canvas.H, new Color(40, 120, 30)));
-        g2.fill(startBtn);
+        Raster.fill(g2, startBtn);
 
         g2.setPaint(new GradientPaint(0, y, new Color(255, 255, 255, 100),
                 0, y + Canvas.TASKBAR_H / 2, new Color(255, 255, 255, 0)));
-        g2.fill(new RoundRectangle2D.Double(0, y, 105, Canvas.TASKBAR_H / 2.0, 15, 15));
+        Raster.fill(g2, new RoundRectangle2D.Double(0, y, 105, Canvas.TASKBAR_H / 2.0, 15, 15));
 
         g2.setColor(new Color(20, 80, 10));
-        g2.draw(new RoundRectangle2D.Double(0, y, 105, Canvas.TASKBAR_H, 15, 15));
+        Raster.draw(g2, new RoundRectangle2D.Double(0, y, 105, Canvas.TASKBAR_H, 15, 15));
 
         int fx = 12, fy = y + 10, fs = 7;
         g2.setColor(new Color(240, 80, 50));
@@ -1151,7 +1498,7 @@ final class MinesweeperWidget {
         stem.moveTo(cx - 3, top + 3);
         stem.lineTo(cx, top);
         stem.lineTo(cx, bottom);
-        g2.draw(stem);
+        Raster.draw(g2, stem);
         Raster.drawLine(g2, cx - 4, bottom, cx + 4, bottom);
         g2.setStroke(new BasicStroke(1f));
     }
@@ -1167,7 +1514,7 @@ final class MinesweeperWidget {
         two.curveTo(cx - 4, top - 2, cx + 5, top - 2, cx + 5, top + 3);
         two.curveTo(cx + 5, top + 7, cx - 5, bottom - 4, cx - 5, bottom);
         two.lineTo(cx + 5, bottom);
-        g2.draw(two);
+        Raster.draw(g2, two);
         g2.setStroke(new BasicStroke(1f));
     }
 
@@ -1232,7 +1579,7 @@ final class Win7Scene {
         Raster.fillRect(g2, 0, 0, Canvas.W, Canvas.H);
 
         RadialGradientPaint glow = new RadialGradientPaint(
-                new Point2D.Float(Canvas.W / 2f, Canvas.H / 2f - 30), 350f,
+                new java.awt.geom.Point2D.Float(Canvas.W / 2f, Canvas.H / 2f - 30), 350f,
                 new float[]{0.0f, 1.0f},
                 new Color[]{new Color(55, 175, 245, 160), new Color(0, 0, 0, 0)});
         g2.setPaint(glow);
@@ -1251,21 +1598,21 @@ final class Win7Scene {
         ribbon1.moveTo(-50, h - 40);
         ribbon1.curveTo(w * 0.3, h * 0.35, w * 0.7, h * 0.85, w + 50, h * 0.55);
         g2.setColor(new Color(255, 255, 255, 22));
-        g2.draw(ribbon1);
+        Raster.draw(g2, ribbon1);
 
         g2.setStroke(new BasicStroke(16f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         Path2D.Double ribbon2 = new Path2D.Double();
         ribbon2.moveTo(-20, h - 20);
         ribbon2.curveTo(w * 0.4, h * 0.3, w * 0.6, h * 0.8, w + 20, h * 0.5);
         g2.setColor(new Color(255, 255, 255, 45));
-        g2.draw(ribbon2);
+        Raster.draw(g2, ribbon2);
 
         g2.setStroke(new BasicStroke(3f));
         Path2D.Double ribbon3 = new Path2D.Double();
         ribbon3.moveTo(0, h - 100);
         ribbon3.curveTo(w * 0.35, h * 0.35, w * 0.65, h * 0.75, w, h * 0.55);
         g2.setColor(new Color(255, 255, 255, 130));
-        g2.draw(ribbon3);
+        Raster.draw(g2, ribbon3);
 
         g2.setStroke(new BasicStroke(1f));
     }
@@ -1280,7 +1627,7 @@ final class Win7Scene {
         redPane.closePath();
         g2.setPaint(new GradientPaint(cx - 100, cy - 110, new Color(245, 95, 40, 225),
                 cx - 7, cy - 7, new Color(210, 45, 25, 225)));
-        g2.fill(redPane);
+        Raster.fill(g2, redPane);
 
         Path2D.Double greenPane = new Path2D.Double();
         greenPane.moveTo(cx + 7, cy - 93);
@@ -1290,7 +1637,7 @@ final class Win7Scene {
         greenPane.closePath();
         g2.setPaint(new GradientPaint(cx + 7, cy - 93, new Color(145, 215, 50, 225),
                 cx + 100, cy - 14, new Color(75, 175, 30, 225)));
-        g2.fill(greenPane);
+        Raster.fill(g2, greenPane);
 
         Path2D.Double bluePane = new Path2D.Double();
         bluePane.moveTo(cx - 100, cy + 9);
@@ -1300,7 +1647,7 @@ final class Win7Scene {
         bluePane.closePath();
         g2.setPaint(new GradientPaint(cx - 100, cy - 6, new Color(35, 170, 245, 225),
                 cx - 7, cy + 93, new Color(15, 100, 210, 225)));
-        g2.fill(bluePane);
+        Raster.fill(g2, bluePane);
 
         Path2D.Double yellowPane = new Path2D.Double();
         yellowPane.moveTo(cx + 7, cy + 7);
@@ -1310,7 +1657,7 @@ final class Win7Scene {
         yellowPane.closePath();
         g2.setPaint(new GradientPaint(cx + 7, cy + 7, new Color(255, 205, 30, 225),
                 cx + 100, cy + 84, new Color(225, 150, 10, 225)));
-        g2.fill(yellowPane);
+        Raster.fill(g2, yellowPane);
     }
 }
 
@@ -1347,7 +1694,7 @@ final class Win7Taskbar {
         int orbX = 22, orbY = y + Canvas.TASKBAR_H / 2;
 
         RadialGradientPaint orbGrad = new RadialGradientPaint(
-                new Point2D.Float(orbX, orbY - 4), orbR + 2,
+                new java.awt.geom.Point2D.Float(orbX, orbY - 4), orbR + 2,
                 new float[]{0.0f, 0.7f, 1.0f},
                 new Color[]{new Color(85, 175, 250), new Color(15, 85, 180), new Color(5, 35, 95)});
         g2.setPaint(orbGrad);
@@ -1400,15 +1747,15 @@ final class Win7MinecraftWindow {
         Rectangle b = WINDOW_BOUNDS;
 
         g2.setColor(new Color(0, 0, 0, 80));
-        g2.fill(new RoundRectangle2D.Double(b.x + 6, b.y + 6, b.width, b.height, 14, 14));
+        Raster.fill(g2, new RoundRectangle2D.Double(b.x + 6, b.y + 6, b.width, b.height, 14, 14));
 
         g2.setColor(new Color(130, 185, 225, 170));
-        g2.fill(new RoundRectangle2D.Double(b.x, b.y, b.width, b.height, 12, 12));
+        Raster.fill(g2, new RoundRectangle2D.Double(b.x, b.y, b.width, b.height, 12, 12));
 
         GradientPaint glassGlow = new GradientPaint(
                 b.x, b.y, new Color(255, 255, 255, 140), b.x, b.y + TITLE_H, new Color(255, 255, 255, 30));
         g2.setPaint(glassGlow);
-        g2.fill(new RoundRectangle2D.Double(b.x, b.y, b.width, TITLE_H, 12, 12));
+        Raster.fill(g2, new RoundRectangle2D.Double(b.x, b.y, b.width, TITLE_H, 12, 12));
 
         drawTitleBarButtons(g2, b);
 
@@ -1418,10 +1765,10 @@ final class Win7MinecraftWindow {
         int clientH = b.height - TITLE_H - BORDER;
 
         // Get clip to make sure nothing is drawn outside the window's edges
-        Shape savedClip = g2.getClip();
-        g2.clip(new Rectangle2D.Double(clientX, clientY, clientW, clientH));
+        Object savedClip = Raster.getClip();
+        Raster.clip(new Rectangle2D.Double(clientX, clientY, clientW, clientH));
         MinecraftScene.draw(g2, clientX, clientY, clientW, clientH, t);
-        g2.setClip(savedClip);
+        Raster.setClip(savedClip);
 
         g2.setColor(new Color(0, 0, 0, 150));
         Raster.drawRect(g2, clientX - 1, clientY - 1, clientW + 1, clientH + 1);
@@ -1433,7 +1780,7 @@ final class Win7MinecraftWindow {
 
         g2.setPaint(new GradientPaint(closeX, buttonY, new Color(230, 90, 80, 230),
                 closeX, buttonY + bh, new Color(180, 40, 30, 240)));
-        g2.fill(new RoundRectangle2D.Double(closeX, buttonY, bw, bh, 4, 4));
+        Raster.fill(g2, new RoundRectangle2D.Double(closeX, buttonY, bw, bh, 4, 4));
         g2.setColor(Color.WHITE);
         g2.setStroke(new BasicStroke(1.5f));
         Raster.drawLine(g2, closeX + 9, buttonY + 5, closeX + bw - 9, buttonY + bh - 5);
@@ -1442,14 +1789,14 @@ final class Win7MinecraftWindow {
         int maximizeX = closeX - bw - 2;
         g2.setPaint(new GradientPaint(maximizeX, buttonY, new Color(225, 240, 250, 160),
                 maximizeX, buttonY + bh, new Color(175, 200, 220, 190)));
-        g2.fill(new RoundRectangle2D.Double(maximizeX, buttonY, bw, bh, 4, 4));
+        Raster.fill(g2, new RoundRectangle2D.Double(maximizeX, buttonY, bw, bh, 4, 4));
         g2.setColor(new Color(40, 50, 65));
         Raster.drawRect(g2, maximizeX + 8, buttonY + 4, 9, 8);
 
         int minimizeX = maximizeX - bw - 2;
         g2.setPaint(new GradientPaint(minimizeX, buttonY, new Color(225, 240, 250, 160),
                 minimizeX, buttonY + bh, new Color(175, 200, 220, 190)));
-        g2.fill(new RoundRectangle2D.Double(minimizeX, buttonY, bw, bh, 4, 4));
+        Raster.fill(g2, new RoundRectangle2D.Double(minimizeX, buttonY, bw, bh, 4, 4));
         g2.setColor(new Color(40, 50, 65));
         Raster.drawLine(g2, minimizeX + 8, buttonY + 11, minimizeX + 16, buttonY + 11);
         g2.setStroke(new BasicStroke(1f));
@@ -1590,9 +1937,9 @@ private static void drawSword(Graphics2D g2, int cx, int cy, int cw, int ch) {
         blade.lineTo(swX + 85, swY + 95);
         blade.closePath();
         g2.setColor(new Color(200, 215, 220));
-        g2.fill(blade);
+        Raster.fill(g2, blade);
         g2.setColor(Color.BLACK);
-        g2.draw(blade);
+        Raster.draw(g2, blade);
 
         Path2D.Double handle = new Path2D.Double();
         handle.moveTo(swX + 74, swY + 99);
@@ -1602,9 +1949,9 @@ private static void drawSword(Graphics2D g2, int cx, int cy, int cw, int ch) {
         handle.closePath();
 
         g2.setColor(new Color(90, 60, 30));
-        g2.fill(handle);
+        Raster.fill(g2, handle);
         g2.setColor(Color.BLACK);
-        g2.draw(handle);
+        Raster.draw(g2, handle);
 
         Path2D.Double guard = new Path2D.Double();
         guard.moveTo(swX + 52, swY + 121);
@@ -1614,9 +1961,9 @@ private static void drawSword(Graphics2D g2, int cx, int cy, int cw, int ch) {
         guard.closePath();
 
         g2.setColor(new Color(110, 75, 35));
-        g2.fill(guard);
+        Raster.fill(g2, guard);
         g2.setColor(Color.BLACK);
-        g2.draw(guard);
+        Raster.draw(g2, guard);
     }
 
     private static void drawHud(Graphics2D g2, int cx, int cy, int cw, int ch) {
@@ -1681,7 +2028,7 @@ final class Win11Scene {
         Raster.fillRect(g2, 0, 0, Canvas.W, Canvas.H);
 
         RadialGradientPaint centerGlow = new RadialGradientPaint(
-                new Point2D.Float(Canvas.W * 0.5f, Canvas.H * 0.4f), 400f,
+                new java.awt.geom.Point2D.Float(Canvas.W * 0.5f, Canvas.H * 0.4f), 400f,
                 new float[]{0.0f, 1.0f},
                 new Color[]{new Color(230, 242, 255, 180), new Color(165, 195, 225, 0)});
         g2.setPaint(centerGlow);
@@ -1701,7 +2048,7 @@ final class Win11Scene {
         p1.curveTo(cx + 220, 120, cx + 260, 280, cx + 170, bottomY);
         p1.closePath();
         g2.setPaint(new GradientPaint(cx - 120, 50, new Color(10, 45, 130), cx + 120, bottomY, new Color(0, 95, 210)));
-        g2.fill(p1);
+        Raster.fill(g2, p1);
 
         Path2D.Double p2 = new Path2D.Double();
         p2.moveTo(cx - 170, bottomY);
@@ -1709,7 +2056,7 @@ final class Win11Scene {
         p2.curveTo(cx + 200, 180, cx + 185, 330, cx + 85, bottomY);
         p2.closePath();
         g2.setPaint(new GradientPaint(cx - 100, 90, new Color(15, 115, 235), cx + 70, bottomY, new Color(0, 60, 175)));
-        g2.fill(p2);
+        Raster.fill(g2, p2);
 
         Path2D.Double p3 = new Path2D.Double();
         p3.moveTo(cx - 120, bottomY);
@@ -1717,7 +2064,7 @@ final class Win11Scene {
         p3.curveTo(cx + 145, 220, cx + 120, 350, cx - 15, bottomY);
         p3.closePath();
         g2.setPaint(new GradientPaint(cx - 65, 130, new Color(75, 175, 255), cx + 45, bottomY, new Color(20, 110, 220)));
-        g2.fill(p3);
+        Raster.fill(g2, p3);
 
         Path2D.Double p4 = new Path2D.Double();
         p4.moveTo(cx - 70, bottomY);
@@ -1725,7 +2072,7 @@ final class Win11Scene {
         p4.curveTo(cx + 125, 290, cx + 55, 370, cx - 10, bottomY);
         p4.closePath();
         g2.setPaint(new GradientPaint(cx - 25, 190, new Color(135, 210, 255), cx + 25, bottomY, new Color(40, 130, 240)));
-        g2.fill(p4);
+        Raster.fill(g2, p4);
     }
 }
 
@@ -1759,7 +2106,7 @@ final class Win11Taskbar {
         drawStoreIcon(g2, startX + ICON_SPACING * 7, iconY);
 
         g2.setColor(new Color(0, 103, 192));
-        g2.fill(new RoundRectangle2D.Double(startX + ICON_SPACING * 5 + 4, y + Canvas.TASKBAR_H - 3, 12, 2, 1, 1));
+        Raster.fill(g2, new RoundRectangle2D.Double(startX + ICON_SPACING * 5 + 4, y + Canvas.TASKBAR_H - 3, 12, 2, 1, 1));
 
         drawSystemTray(g2, y);
     }
@@ -1767,10 +2114,10 @@ final class Win11Taskbar {
     private static void drawStartIcon(Graphics2D g2, int x, int y) {
         int s = 9;
         g2.setColor(new Color(0, 120, 215));
-        g2.fill(new RoundRectangle2D.Double(x, y, s, s, 2, 2));
-        g2.fill(new RoundRectangle2D.Double(x + s + 2, y, s, s, 2, 2));
-        g2.fill(new RoundRectangle2D.Double(x, y + s + 2, s, s, 2, 2));
-        g2.fill(new RoundRectangle2D.Double(x + s + 2, y + s + 2, s, s, 2, 2));
+        Raster.fill(g2, new RoundRectangle2D.Double(x, y, s, s, 2, 2));
+        Raster.fill(g2, new RoundRectangle2D.Double(x + s + 2, y, s, s, 2, 2));
+        Raster.fill(g2, new RoundRectangle2D.Double(x, y + s + 2, s, s, 2, 2));
+        Raster.fill(g2, new RoundRectangle2D.Double(x + s + 2, y + s + 2, s, s, 2, 2));
     }
 
     private static void drawSearchIcon(Graphics2D g2, int x, int y) {
@@ -1869,11 +2216,11 @@ final class SahurCharacter {
     private SahurCharacter() {}
 
     static void draw(Graphics2D g2, int cx, int cy, double scale) {
-        AffineTransform saved = g2.getTransform();
-        g2.translate(cx, cy);
+        AffineTransform saved = Raster.getTransform();
+        Raster.translate(cx, cy);
 
         double adjustedScale = scale * 1.4; 
-        g2.scale(adjustedScale, adjustedScale);
+        Raster.scale(adjustedScale, adjustedScale);
 
         drawStick(g2);
         drawLegs(g2);
@@ -1882,7 +2229,7 @@ final class SahurCharacter {
         drawFace(g2);
         drawViewerRightArm(g2);
 
-        g2.setTransform(saved);
+        Raster.setTransform(saved);
     }
 
     private static void drawStick(Graphics2D g2) {
@@ -1894,7 +2241,7 @@ final class SahurCharacter {
         stick.closePath();
 
         g2.setColor(WOOD_SHADOW);
-        g2.fill(stick);
+        Raster.fill(g2, stick);
 
         Path2D stickHighlight = new Path2D.Double();
         stickHighlight.moveTo(-22, 32);
@@ -1904,7 +2251,7 @@ final class SahurCharacter {
         stickHighlight.closePath();
 
         g2.setColor(WOOD_BASE);
-        g2.fill(stickHighlight);
+        Raster.fill(g2, stickHighlight);
     }
 
     private static void drawLegs(Graphics2D g2) {
@@ -1936,7 +2283,7 @@ final class SahurCharacter {
         arm.curveTo(-32, 15, -30, 30, -22, 45);
 
         g2.setColor(WOOD_SHADOW);
-        g2.draw(arm);
+        Raster.draw(g2, arm);
         g2.setStroke(new BasicStroke(1f));
 
         Raster.fillOval(g2, -26, 40, 12, 12); 
@@ -1949,11 +2296,11 @@ final class SahurCharacter {
         arm.curveTo(35, 10, 33, 30, 25, 45); 
 
         g2.setColor(WOOD_BASE);
-        g2.draw(arm);
+        Raster.draw(g2, arm);
 
         g2.setColor(WOOD_SHADOW);
         g2.setStroke(new BasicStroke(1.5f));
-        g2.draw(arm);
+        Raster.draw(g2, arm);
         g2.setStroke(new BasicStroke(1f));
 
         g2.setColor(WOOD_BASE);
@@ -1970,7 +2317,7 @@ final class SahurCharacter {
         body.closePath();
 
         g2.setColor(WOOD_BASE);
-        g2.fill(body);
+        Raster.fill(g2, body);
 
         Path2D shadow = new Path2D.Double();
         shadow.moveTo(-28, -105);
@@ -1979,7 +2326,7 @@ final class SahurCharacter {
         shadow.curveTo(-5, 40, 0, -90, -5, -105);
         shadow.closePath();
         g2.setColor(WOOD_SHADOW);
-        g2.fill(shadow);
+        Raster.fill(g2, shadow);
 
         Path2D highlight = new Path2D.Double();
         highlight.moveTo(28, -105);
@@ -1988,7 +2335,7 @@ final class SahurCharacter {
         highlight.curveTo(20, 40, 18, -90, 15, -105);
         highlight.closePath();
         g2.setColor(WOOD_LIGHT);
-        g2.fill(highlight);
+        Raster.fill(g2, highlight);
     }
 
     private static void drawFace(Graphics2D g2) {
@@ -2031,7 +2378,7 @@ final class SahurCharacter {
         nose.closePath();
 
         g2.setColor(WOOD_BASE);
-        g2.fill(nose);
+        Raster.fill(g2, nose);
         g2.setColor(WOOD_LIGHT);
         Raster.fillPolygon(g2, new int[]{-5, -14, 0}, new int[]{-53, -42, -45}, 3);
 
@@ -2046,7 +2393,7 @@ final class SahurCharacter {
         mouth.curveTo(-5, -20, 15, -20, 22, -35);
         mouth.curveTo(15, -25, -5, -25, -15, -30);
         mouth.closePath();
-        g2.fill(mouth);
+        Raster.fill(g2, mouth);
 
         g2.setColor(WOOD_SHADOW);
         Raster.drawArc(g2, 15, -45, 12, 20, 270, 70);
