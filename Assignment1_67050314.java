@@ -1,6 +1,7 @@
 import java.awt.*;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 import javax.swing.*;
 
 public class Assignment1_67050314 extends JPanel implements Runnable {
@@ -55,10 +56,363 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        Graphics2D g2 = (Graphics2D) g;
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        
+
+        // Rasterize by hand into the frame buffer; g2 is only used to track drawing state
+        Raster.setTarget(frameBuffer);
+        Raster.clear();
+
+        Graphics2D g2 = frameBuffer.createGraphics();
         SceneRenderer.render(g2, totalTime);
+        g2.dispose();
+
+        // Blit the finished frame onto the screen
+        g.drawImage(frameBuffer, 0, 0, null);
+    }
+}
+
+// Custom pixel-level rasterizer: plots lines, ovals, arcs and fills by hand
+final class Raster {
+    private static int[] pixels;
+    private static int width, height;
+
+    private Raster() {}
+
+    static void setTarget(BufferedImage img) {
+        pixels = ((DataBufferInt) img.getRaster().getDataBuffer()).getData();
+        width = img.getWidth();
+        height = img.getHeight();
+    }
+
+    // Wipes the buffer transparent
+    static void clear() {
+        java.util.Arrays.fill(pixels, 0);
+    }
+
+    private static int clampByte(int v) {
+        return v < 0 ? 0 : (v > 255 ? 255 : v);
+    }
+
+    // Blends one pixel into the buffer, honoring clip + alpha
+    private static void plotDevice(Graphics2D g2, int x, int y, Color c) {
+        if (c == null || x < 0 || y < 0 || x >= width || y >= height) return;
+        int a = c.getAlpha();
+        if (a <= 0) return;
+        Shape clip = g2.getClip();
+        if (clip != null && !clip.contains(x + 0.5, y + 0.5)) return;
+
+        int idx = y * width + x;
+        if (a >= 255) {
+            pixels[idx] = 0xFF000000 | (c.getRed() << 16) | (c.getGreen() << 8) | c.getBlue();
+            return;
+        }
+        int dst = pixels[idx];
+        double sa = a / 255.0;
+        int dstA = (dst >>> 24) & 0xFF, dstR = (dst >>> 16) & 0xFF, dstG = (dst >>> 8) & 0xFF, dstB = dst & 0xFF;
+        int outA = clampByte((int) Math.round(a + dstA * (1 - sa)));
+        int outR = clampByte((int) Math.round(c.getRed() * sa + dstR * (1 - sa)));
+        int outG = clampByte((int) Math.round(c.getGreen() * sa + dstG * (1 - sa)));
+        int outB = clampByte((int) Math.round(c.getBlue() * sa + dstB * (1 - sa)));
+        pixels[idx] = (outA << 24) | (outR << 16) | (outG << 8) | outB;
+    }
+
+    // Thick dot for stroke width > 1px
+    private static void stampDot(Graphics2D g2, int cx, int cy, float w, Color c) {
+        if (w <= 1.5f) {
+            plotDevice(g2, cx, cy, c);
+            return;
+        }
+        int r = Math.round(w / 2f);
+        for (int yy = -r; yy <= r; yy++) {
+            for (int xx = -r; xx <= r; xx++) {
+                if (xx * xx + yy * yy <= r * r) plotDevice(g2, cx + xx, cy + yy, c);
+            }
+        }
+    }
+
+    // User space -> device space, via g2's current transform
+    private static Point2D toDevice(Graphics2D g2, double x, double y) {
+        return g2.getTransform().transform(new Point2D.Double(x, y), null);
+    }
+
+    // g2's current scale factor
+    private static double scaleFactor(Graphics2D g2) {
+        Point2D v = g2.getTransform().deltaTransform(new Point2D.Double(1, 0), null);
+        return Math.hypot(v.getX(), v.getY());
+    }
+
+    private static float strokeWidth(Graphics2D g2) {
+        Stroke s = g2.getStroke();
+        return (s instanceof BasicStroke) ? ((BasicStroke) s).getLineWidth() : 1f;
+    }
+
+    private static Color lerpColor(Color a, Color b, double t) {
+        t = Math.max(0, Math.min(1, t));
+        return new Color(
+                clampByte((int) Math.round(a.getRed() + (b.getRed() - a.getRed()) * t)),
+                clampByte((int) Math.round(a.getGreen() + (b.getGreen() - a.getGreen()) * t)),
+                clampByte((int) Math.round(a.getBlue() + (b.getBlue() - a.getBlue()) * t)),
+                clampByte((int) Math.round(a.getAlpha() + (b.getAlpha() - a.getAlpha()) * t)));
+    }
+
+    private static Color sampleLinear(GradientPaint gp, double x, double y) {
+        Point2D p1 = gp.getPoint1(), p2 = gp.getPoint2();
+        double dx = p2.getX() - p1.getX(), dy = p2.getY() - p1.getY();
+        double len2 = dx * dx + dy * dy;
+        double t = (len2 == 0) ? 0 : ((x - p1.getX()) * dx + (y - p1.getY()) * dy) / len2;
+        if (gp.isCyclic()) {
+            t = t - 2 * Math.floor(t / 2);
+            if (t > 1) t = 2 - t;
+        } else {
+            t = Math.max(0, Math.min(1, t));
+        }
+        return lerpColor(gp.getColor1(), gp.getColor2(), t);
+    }
+
+    private static Color sampleRadial(RadialGradientPaint rp, double x, double y) {
+        Point2D c = rp.getCenterPoint();
+        float radius = rp.getRadius();
+        double t = (radius == 0) ? 0 : Math.min(1.0, Math.hypot(x - c.getX(), y - c.getY()) / radius);
+        float[] fractions = rp.getFractions();
+        Color[] colors = rp.getColors();
+        for (int i = 0; i < fractions.length - 1; i++) {
+            if (t >= fractions[i] && t <= fractions[i + 1]) {
+                double span = fractions[i + 1] - fractions[i];
+                double localT = (span == 0) ? 0 : (t - fractions[i]) / span;
+                return lerpColor(colors[i], colors[i + 1], localT);
+            }
+        }
+        return colors[colors.length - 1];
+    }
+
+    // Resolves the fill color (solid or gradient) at a point
+    private static Color colorAt(Graphics2D g2, double x, double y) {
+        Paint p = g2.getPaint();
+        if (p instanceof RadialGradientPaint) return sampleRadial((RadialGradientPaint) p, x, y);
+        if (p instanceof GradientPaint) return sampleLinear((GradientPaint) p, x, y);
+        if (p instanceof Color) return (Color) p;
+        return g2.getColor();
+    }
+
+    // Bresenham's line algorithm
+    private static void bresenham(Graphics2D g2, int x1, int y1, int x2, int y2, float lineWidth, Color c) {
+        int dx = Math.abs(x2 - x1), dy = Math.abs(y2 - y1);
+        int sx = (x1 < x2) ? 1 : -1, sy = (y1 < y2) ? 1 : -1;
+        int err = dx - dy;
+        int x = x1, y = y1;
+        while (true) {
+            stampDot(g2, x, y, lineWidth, c);
+            if (x == x2 && y == y2) break;
+            int e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; x += sx; }
+            if (e2 < dx) { err += dx; y += sy; }
+        }
+    }
+
+    static void drawLine(Graphics2D g2, double x1, double y1, double x2, double y2) {
+        Point2D p1 = toDevice(g2, x1, y1);
+        Point2D p2 = toDevice(g2, x2, y2);
+        float w = strokeWidth(g2) * (float) scaleFactor(g2);
+        bresenham(g2, (int) Math.round(p1.getX()), (int) Math.round(p1.getY()),
+                (int) Math.round(p2.getX()), (int) Math.round(p2.getY()), w, g2.getColor());
+    }
+
+    static void drawRect(Graphics2D g2, int x, int y, int w, int h) {
+        drawLine(g2, x, y, x + w, y);
+        drawLine(g2, x + w, y, x + w, y + h);
+        drawLine(g2, x + w, y + h, x, y + h);
+        drawLine(g2, x, y + h, x, y);
+    }
+
+    // Scanline polygon fill, shared by every fill* method
+    private static void fillPolygonDevice(Graphics2D g2, double[] xs, double[] ys, int n) {
+        double minY = ys[0], maxY = ys[0];
+        for (double v : ys) { minY = Math.min(minY, v); maxY = Math.max(maxY, v); }
+        int y0 = (int) Math.floor(minY), y1 = (int) Math.ceil(maxY);
+
+        java.util.List<Double> xs2 = new java.util.ArrayList<>();
+        for (int y = y0; y <= y1; y++) {
+            xs2.clear();
+            for (int i = 0; i < n; i++) {
+                int j = (i + 1) % n;
+                double yi = ys[i], yj = ys[j];
+                if ((yi <= y && yj > y) || (yj <= y && yi > y)) {
+                    xs2.add(xs[i] + (y - yi) / (yj - yi) * (xs[j] - xs[i]));
+                }
+            }
+            java.util.Collections.sort(xs2);
+            for (int i = 0; i + 1 < xs2.size(); i += 2) {
+                int xStart = (int) Math.round(xs2.get(i));
+                int xEnd = (int) Math.round(xs2.get(i + 1));
+                for (int x = xStart; x <= xEnd; x++) plotDevice(g2, x, y, colorAt(g2, x, y));
+            }
+        }
+    }
+
+    static void fillRect(Graphics2D g2, int x, int y, int w, int h) {
+        double[] xs = new double[4], ys = new double[4];
+        int[][] corners = {{x, y}, {x + w, y}, {x + w, y + h}, {x, y + h}};
+        for (int i = 0; i < 4; i++) {
+            Point2D p = toDevice(g2, corners[i][0], corners[i][1]);
+            xs[i] = p.getX();
+            ys[i] = p.getY();
+        }
+        fillPolygonDevice(g2, xs, ys, 4);
+    }
+
+    // Oval center + radii mapped into device space
+    private static double[] deviceEllipseParams(Graphics2D g2, int x, int y, int w, int h) {
+        double lcx = x + w / 2.0, lcy = y + h / 2.0;
+        Point2D center = toDevice(g2, lcx, lcy);
+        Point2D edgeX = toDevice(g2, lcx + w / 2.0, lcy);
+        Point2D edgeY = toDevice(g2, lcx, lcy + h / 2.0);
+        double rx = Math.hypot(edgeX.getX() - center.getX(), edgeX.getY() - center.getY());
+        double ry = Math.hypot(edgeY.getX() - center.getX(), edgeY.getY() - center.getY());
+        return new double[]{center.getX(), center.getY(), rx, ry};
+    }
+
+    private static void addSym(java.util.List<int[]> pts, int icx, int icy, int x, int y) {
+        pts.add(new int[]{icx + x, icy + y});
+        pts.add(new int[]{icx - x, icy + y});
+        pts.add(new int[]{icx + x, icy - y});
+        pts.add(new int[]{icx - x, icy - y});
+    }
+
+    // Midpoint ellipse algorithm
+    private static java.util.List<int[]> midpointEllipsePoints(double cxd, double cyd, double rx, double ry) {
+        java.util.List<int[]> pts = new java.util.ArrayList<>();
+        int icx = (int) Math.round(cxd), icy = (int) Math.round(cyd);
+        int a = (int) Math.round(rx), b = (int) Math.round(ry);
+        if (a <= 0 || b <= 0) {
+            pts.add(new int[]{icx, icy});
+            return pts;
+        }
+        long a2 = (long) a * a, b2 = (long) b * b;
+        int x = 0, y = b;
+        long d1 = Math.round(b2 - a2 * b + 0.25 * a2);
+        addSym(pts, icx, icy, x, y);
+
+        // Region 1
+        while ((double) a2 * y > (double) b2 * x) {
+            x++;
+            if (d1 < 0) {
+                d1 += b2 * (2 * x + 1);
+            } else {
+                y--;
+                d1 += b2 * (2 * x + 1) - 2 * a2 * y;
+            }
+            addSym(pts, icx, icy, x, y);
+        }
+
+        // Region 2
+        long d2 = Math.round(b2 * (x + 0.5) * (x + 0.5) + a2 * (double) (y - 1) * (y - 1) - (double) a2 * b2);
+        while (y > 0) {
+            y--;
+            if (d2 > 0) {
+                d2 += a2 * (-2 * y + 1);
+            } else {
+                x++;
+                d2 += b2 * 2 * x + a2 * (-2 * y + 1);
+            }
+            addSym(pts, icx, icy, x, y);
+        }
+        return pts;
+    }
+
+    static void drawOval(Graphics2D g2, int x, int y, int w, int h) {
+        double[] p = deviceEllipseParams(g2, x, y, w, h);
+        float lw = strokeWidth(g2) * (float) scaleFactor(g2);
+        Color c = g2.getColor();
+        for (int[] pt : midpointEllipsePoints(p[0], p[1], p[2], p[3])) {
+            stampDot(g2, pt[0], pt[1], lw, c);
+        }
+    }
+
+    static void fillOval(Graphics2D g2, int x, int y, int w, int h) {
+        double[] p = deviceEllipseParams(g2, x, y, w, h);
+            // Fill between each row's min/max x from the boundary points
+        java.util.Map<Integer, int[]> rowSpan = new java.util.HashMap<>();
+        for (int[] pt : midpointEllipsePoints(p[0], p[1], p[2], p[3])) {
+            int[] span = rowSpan.get(pt[1]);
+            if (span == null) rowSpan.put(pt[1], new int[]{pt[0], pt[0]});
+            else { span[0] = Math.min(span[0], pt[0]); span[1] = Math.max(span[1], pt[0]); }
+        }
+        for (java.util.Map.Entry<Integer, int[]> e : rowSpan.entrySet()) {
+            int yy = e.getKey();
+            for (int xx = e.getValue()[0]; xx <= e.getValue()[1]; xx++) {
+                plotDevice(g2, xx, yy, colorAt(g2, xx, yy));
+            }
+        }
+    }
+
+    private static double norm360(double a) {
+        return ((a % 360) + 360) % 360;
+    }
+
+    // Is ang within the arc's angle sweep?
+    private static boolean angleInArc(double ang, double startAngle, double arcAngle) {
+        double a1 = (arcAngle >= 0) ? startAngle : startAngle + arcAngle;
+        double rel = norm360(ang - a1);
+        return rel <= Math.abs(arcAngle) + 0.6;
+    }
+
+    static void drawArc(Graphics2D g2, int x, int y, int w, int h, int startAngle, int arcAngle) {
+        double[] p = deviceEllipseParams(g2, x, y, w, h);
+        float lw = strokeWidth(g2) * (float) scaleFactor(g2);
+        Color c = g2.getColor();
+        for (int[] pt : midpointEllipsePoints(p[0], p[1], p[2], p[3])) {
+            double ang = Math.toDegrees(Math.atan2(-(pt[1] - p[1]), pt[0] - p[0]));
+            if (angleInArc(ang, startAngle, arcAngle)) stampDot(g2, pt[0], pt[1], lw, c);
+        }
+    }
+
+    static void fillArc(Graphics2D g2, int x, int y, int w, int h, int startAngle, int arcAngle) {
+        double[] p = deviceEllipseParams(g2, x, y, w, h);
+        double cx = p[0], cy = p[1], rx = p[2], ry = p[3];
+        if (rx <= 0 || ry <= 0) return;
+        int y0 = (int) Math.floor(cy - ry), y1 = (int) Math.ceil(cy + ry);
+        for (int yy = y0; yy <= y1; yy++) {
+            double dy = (yy - cy) / ry;
+            double under = 1 - dy * dy;
+            if (under < 0) continue;
+            double dx = rx * Math.sqrt(under);
+            int xStart = (int) Math.round(cx - dx), xEnd = (int) Math.round(cx + dx);
+            for (int xx = xStart; xx <= xEnd; xx++) {
+                double ang = Math.toDegrees(Math.atan2(-(yy - cy), xx - cx));
+                if (angleInArc(ang, startAngle, arcAngle)) plotDevice(g2, xx, yy, colorAt(g2, xx, yy));
+            }
+        }
+    }
+
+    static void drawRoundRect(Graphics2D g2, int x, int y, int w, int h, int arcWidth, int arcHeight) {
+        int aw = arcWidth, ah = arcHeight;
+        drawLine(g2, x + aw / 2.0, y, x + w - aw / 2.0, y);
+        drawLine(g2, x + w, y + ah / 2.0, x + w, y + h - ah / 2.0);
+        drawLine(g2, x + w - aw / 2.0, y + h, x + aw / 2.0, y + h);
+        drawLine(g2, x, y + h - ah / 2.0, x, y + ah / 2.0);
+        drawArc(g2, x, y, aw, ah, 90, 90);
+        drawArc(g2, x + w - aw, y, aw, ah, 0, 90);
+        drawArc(g2, x + w - aw, y + h - ah, aw, ah, 270, 90);
+        drawArc(g2, x, y + h - ah, aw, ah, 180, 90);
+    }
+
+    static void fillRoundRect(Graphics2D g2, int x, int y, int w, int h, int arcWidth, int arcHeight) {
+        int aw = arcWidth, ah = arcHeight;
+        fillRect(g2, x + aw / 2, y, w - aw, h);
+        fillRect(g2, x, y + ah / 2, w, h - ah);
+        fillArc(g2, x, y, aw, ah, 90, 90);
+        fillArc(g2, x + w - aw, y, aw, ah, 0, 90);
+        fillArc(g2, x + w - aw, y + h - ah, aw, ah, 270, 90);
+        fillArc(g2, x, y + h - ah, aw, ah, 180, 90);
+    }
+
+    static void fillPolygon(Graphics2D g2, int[] xPoints, int[] yPoints, int nPoints) {
+        double[] xs = new double[nPoints], ys = new double[nPoints];
+        for (int i = 0; i < nPoints; i++) {
+            Point2D pt = toDevice(g2, xPoints[i], yPoints[i]);
+            xs[i] = pt.getX();
+            ys[i] = pt.getY();
+        }
+        fillPolygonDevice(g2, xs, ys, nPoints);
     }
 }
 
@@ -191,7 +545,7 @@ final class Explosion {
         int ringRadius = (int) (easeOut * 800);
         g2.setStroke(new BasicStroke((float) ((1.0 - progress) * 25f)));
         g2.setColor(new Color(255, 255, 255, (int) (alpha * 0.4)));
-        g2.drawOval(cx - ringRadius, cy - ringRadius, ringRadius * 2, ringRadius * 2);
+        Raster.drawOval(g2, cx - ringRadius, cy - ringRadius, ringRadius * 2, ringRadius * 2);
         g2.setStroke(new BasicStroke(1f));
     }
 
@@ -210,7 +564,7 @@ final class Explosion {
                         new Color(50, 0, 0, 0)
                 });
         g2.setPaint(blastGradient);
-        g2.fillOval(cx - coreRadius, cy - coreRadius, coreRadius * 2, coreRadius * 2);
+        Raster.fillOval(g2, cx - coreRadius, cy - coreRadius, coreRadius * 2, coreRadius * 2);
     }
 
     // Draws lines shooting outward like sparks
@@ -230,7 +584,7 @@ final class Explosion {
             int y1 = (int) (cy + Math.sin(rad) * Math.max(0, dist - trailLength));
 
             g2.setColor(new Color(255, (int) (200 * (1.0 - progress)), 0, alpha));
-            g2.drawLine(x1, y1, x2, y2);
+            Raster.drawLine(g2, x1, y1, x2, y2);
         }
         g2.setStroke(new BasicStroke(1f));
     }
@@ -248,7 +602,7 @@ final class DrawUtils {
 
     static void fillPoly(Graphics2D g2, Color color, int[] xs, int[] ys) {
         g2.setColor(color);
-        g2.fillPolygon(xs, ys, xs.length);
+        Raster.fillPolygon(g2, xs, ys, xs.length);
     }
 
     static void fillPolyRelative(Graphics2D g2, Color color, int cx, int cy, int[] dx, int[] dy, double scale) {
@@ -280,10 +634,10 @@ final class DrawUtils {
     }
 
     private static void fillCircleScanlines(Graphics2D g2, int cx, int cy, int x, int y) {
-        g2.drawLine(cx - x, cy + y, cx + x, cy + y);
-        g2.drawLine(cx - x, cy - y, cx + x, cy - y);
-        g2.drawLine(cx - y, cy + x, cx + y, cy + x);
-        g2.drawLine(cx - y, cy - x, cx + y, cy - x);
+        Raster.drawLine(g2, cx - x, cy + y, cx + x, cy + y);
+        Raster.drawLine(g2, cx - x, cy - y, cx + x, cy - y);
+        Raster.drawLine(g2, cx - y, cy + x, cx + y, cy + x);
+        Raster.drawLine(g2, cx - y, cy - x, cx + y, cy - x);
     }
 }
 
@@ -334,7 +688,7 @@ final class XPScene {
         Color grassDeep = new Color(52, 80, 20);
 
         g2.setColor(skyMid);
-        g2.fillRect(0, 0, Canvas.W, Canvas.H);
+        Raster.fillRect(g2, 0, 0, Canvas.W, Canvas.H);
 
         DrawUtils.fillPoly(g2, skyDark,
                 new int[]{0, 110, 160, 200, 150, 120, 80, 30, 0},
@@ -426,10 +780,10 @@ final class WindowChrome {
 
         // Draw small blue lines along the window's edges
         g2.setColor(new Color(0, 70, 200));
-        g2.drawLine(x, y + 10, x, y + h - 10);
-        g2.drawLine(x + w, y + 10, x + w, y + h - 10);
-        g2.drawLine(x + 10, y, x + w - 10, y);
-        g2.drawLine(x + 10, y + h, x + w - 10, y + h);
+        Raster.drawLine(g2, x, y + 10, x, y + h - 10);
+        Raster.drawLine(g2, x + w, y + 10, x + w, y + h - 10);
+        Raster.drawLine(g2, x + 10, y, x + w - 10, y);
+        Raster.drawLine(g2, x + 10, y + h, x + w - 10, y + h);
     }
 
     // Draws the blue title bar on top
@@ -459,7 +813,7 @@ final class WindowChrome {
                 minimizeX, buttonY + bh, new Color(30, 100, 220)));
         g2.fill(new RoundRectangle2D.Double(minimizeX, buttonY, bw, bh, 4, 4));
         g2.setColor(Color.WHITE);
-        g2.fillRect(minimizeX + 6, buttonY + bh - 7, bw - 12, 3);
+        Raster.fillRect(g2, minimizeX + 6, buttonY + bh - 7, bw - 12, 3);
 
         int maximizeX = minimizeX + bw + gap;
         g2.setPaint(new GradientPaint(maximizeX, buttonY, new Color(80, 160, 255),
@@ -467,8 +821,8 @@ final class WindowChrome {
         g2.fill(new RoundRectangle2D.Double(maximizeX, buttonY, bw, bh, 4, 4));
         g2.setColor(Color.WHITE);
         g2.setStroke(new BasicStroke(2f));
-        g2.drawRect(maximizeX + 6, buttonY + 6, bw - 12, bh - 12);
-        g2.fillRect(maximizeX + 6, buttonY + 6, bw - 12, 3);
+        Raster.drawRect(g2, maximizeX + 6, buttonY + 6, bw - 12, bh - 12);
+        Raster.fillRect(g2, maximizeX + 6, buttonY + 6, bw - 12, 3);
         g2.setStroke(new BasicStroke(1f));
 
         int closeX = maximizeX + bw + gap;
@@ -477,8 +831,8 @@ final class WindowChrome {
         g2.fill(new RoundRectangle2D.Double(closeX, buttonY, bw, bh, 4, 4));
         g2.setColor(Color.WHITE);
         g2.setStroke(new BasicStroke(2f));
-        g2.drawLine(closeX + 7, buttonY + 7, closeX + bw - 7, buttonY + bh - 7);
-        g2.drawLine(closeX + bw - 7, buttonY + 7, closeX + 7, buttonY + bh - 7);
+        Raster.drawLine(g2, closeX + 7, buttonY + 7, closeX + bw - 7, buttonY + bh - 7);
+        Raster.drawLine(g2, closeX + bw - 7, buttonY + 7, closeX + 7, buttonY + bh - 7);
         g2.setStroke(new BasicStroke(1f));
     }
 }
@@ -494,20 +848,20 @@ final class XPTaskbar {
         // Fill in the taskbar's background color
         GradientPaint bar = new GradientPaint(0, y, new Color(30, 90, 220), 0, Canvas.H, new Color(15, 60, 160));
         g2.setPaint(bar);
-        g2.fillRect(0, y, Canvas.W, Canvas.TASKBAR_H);
+        Raster.fillRect(g2, 0, y, Canvas.W, Canvas.TASKBAR_H);
 
         g2.setColor(new Color(60, 140, 255));
-        g2.fillRect(0, y, Canvas.W, 2);
+        Raster.fillRect(g2, 0, y, Canvas.W, 2);
         g2.setColor(new Color(15, 50, 130));
-        g2.fillRect(0, y + 2, Canvas.W, 1);
+        Raster.fillRect(g2, 0, y + 2, Canvas.W, 1);
 
         // Fill in the background for the clock area on the right
         int trayW = 70;
         int trayX = Canvas.W - trayW - 10;
         g2.setPaint(new GradientPaint(trayX, y, new Color(10, 50, 140), trayX, Canvas.H, new Color(30, 100, 210)));
-        g2.fillRect(trayX, y, Canvas.W - trayX, Canvas.TASKBAR_H);
+        Raster.fillRect(g2, trayX, y, Canvas.W - trayX, Canvas.TASKBAR_H);
         g2.setColor(new Color(0, 30, 100));
-        g2.drawLine(trayX, y, trayX, Canvas.H);
+        Raster.drawLine(g2, trayX, y, trayX, Canvas.H);
 
         drawStartButton(g2, y);
     }
@@ -527,13 +881,13 @@ final class XPTaskbar {
 
         int fx = 12, fy = y + 10, fs = 7;
         g2.setColor(new Color(240, 80, 50));
-        g2.fillRect(fx, fy, fs, fs);
+        Raster.fillRect(g2, fx, fy, fs, fs);
         g2.setColor(new Color(110, 200, 70));
-        g2.fillRect(fx + fs + 1, fy, fs, fs);
+        Raster.fillRect(g2, fx + fs + 1, fy, fs, fs);
         g2.setColor(new Color(70, 140, 240));
-        g2.fillRect(fx, fy + fs + 1, fs, fs);
+        Raster.fillRect(g2, fx, fy + fs + 1, fs, fs);
         g2.setColor(new Color(250, 220, 60));
-        g2.fillRect(fx + fs + 1, fy + fs + 1, fs, fs);
+        Raster.fillRect(g2, fx + fs + 1, fy + fs + 1, fs, fs);
 
     }
 }
@@ -625,12 +979,12 @@ final class MinesweeperWidget {
 
         g2.setColor(new Color(128, 128, 128));
         g2.setStroke(new BasicStroke(2f));
-        g2.drawRect(panelX, panelY, panelW, HEADER_PANEL_H);
+        Raster.drawRect(g2, panelX, panelY, panelW, HEADER_PANEL_H);
         g2.setColor(Color.WHITE);
-        g2.drawRect(panelX + 2, panelY + 2, panelW - 4, HEADER_PANEL_H - 4);
+        Raster.drawRect(g2, panelX + 2, panelY + 2, panelW - 4, HEADER_PANEL_H - 4);
         g2.setStroke(new BasicStroke(1f));
         g2.setColor(new Color(192, 192, 192));
-        g2.fillRect(panelX + 2, panelY + 2, panelW - 4, HEADER_PANEL_H - 4);
+        Raster.fillRect(g2, panelX + 2, panelY + 2, panelW - 4, HEADER_PANEL_H - 4);
 
         drawDigitalCounter(g2, panelX + 8, panelY + 7, "010");
 
@@ -642,41 +996,41 @@ final class MinesweeperWidget {
 
     private static void drawDigitalCounter(Graphics2D g2, int x, int y, String value) {
         g2.setColor(new Color(128, 128, 128));
-        g2.drawRect(x, y, 40, 24);
+        Raster.drawRect(g2, x, y, 40, 24);
         g2.setColor(Color.WHITE);
-        g2.drawRect(x + 1, y + 1, 38, 22);
+        Raster.drawRect(g2, x + 1, y + 1, 38, 22);
         g2.setColor(Color.BLACK);
-        g2.fillRect(x + 2, y + 2, 36, 20);
+        Raster.fillRect(g2, x + 2, y + 2, 36, 20);
     }
 
     // Draws the smiley face button and dead face if the game is over
     private static void drawFace(Graphics2D g2, int faceX, int faceY, boolean exploded) {
         g2.setColor(new Color(192, 192, 192));
-        g2.fillRect(faceX, faceY, 26, 26);
+        Raster.fillRect(g2, faceX, faceY, 26, 26);
         g2.setColor(Color.WHITE);
         g2.setStroke(new BasicStroke(2f));
-        g2.drawLine(faceX, faceY, faceX + 25, faceY);
-        g2.drawLine(faceX, faceY, faceX, faceY + 25);
+        Raster.drawLine(g2, faceX, faceY, faceX + 25, faceY);
+        Raster.drawLine(g2, faceX, faceY, faceX, faceY + 25);
         g2.setColor(new Color(128, 128, 128));
-        g2.drawLine(faceX + 25, faceY, faceX + 25, faceY + 25);
-        g2.drawLine(faceX, faceY + 25, faceX + 25, faceY + 25);
+        Raster.drawLine(g2, faceX + 25, faceY, faceX + 25, faceY + 25);
+        Raster.drawLine(g2, faceX, faceY + 25, faceX + 25, faceY + 25);
         g2.setStroke(new BasicStroke(1f));
 
         g2.setColor(Color.YELLOW);
-        g2.fillOval(faceX + 3, faceY + 3, 20, 20);
+        Raster.fillOval(g2, faceX + 3, faceY + 3, 20, 20);
         g2.setColor(Color.BLACK);
-        g2.drawOval(faceX + 3, faceY + 3, 20, 20);
+        Raster.drawOval(g2, faceX + 3, faceY + 3, 20, 20);
 
         if (exploded) {
-            g2.drawLine(faceX + 7, faceY + 8, faceX + 11, faceY + 12);
-            g2.drawLine(faceX + 7, faceY + 12, faceX + 11, faceY + 8);
-            g2.drawLine(faceX + 15, faceY + 8, faceX + 19, faceY + 12);
-            g2.drawLine(faceX + 15, faceY + 12, faceX + 19, faceY + 8);
-            g2.drawArc(faceX + 8, faceY + 13, 10, 8, 0, 180);
+            Raster.drawLine(g2, faceX + 7, faceY + 8, faceX + 11, faceY + 12);
+            Raster.drawLine(g2, faceX + 7, faceY + 12, faceX + 11, faceY + 8);
+            Raster.drawLine(g2, faceX + 15, faceY + 8, faceX + 19, faceY + 12);
+            Raster.drawLine(g2, faceX + 15, faceY + 12, faceX + 19, faceY + 8);
+            Raster.drawArc(g2, faceX + 8, faceY + 13, 10, 8, 0, 180);
         } else {
-            g2.fillRect(faceX + 8, faceY + 9, 2, 3);
-            g2.fillRect(faceX + 16, faceY + 9, 2, 3);
-            g2.drawArc(faceX + 8, faceY + 11, 10, 8, 0, -180);
+            Raster.fillRect(g2, faceX + 8, faceY + 9, 2, 3);
+            Raster.fillRect(g2, faceX + 16, faceY + 9, 2, 3);
+            Raster.drawArc(g2, faceX + 8, faceY + 11, 10, 8, 0, -180);
         }
     }
 
@@ -710,12 +1064,12 @@ final class MinesweeperWidget {
     private static void drawGridFrame(Graphics2D g2, Grid grid) {
         g2.setColor(new Color(128, 128, 128));
         g2.setStroke(new BasicStroke(2f));
-        g2.drawRect(grid.x, grid.y, grid.width, grid.height);
+        Raster.drawRect(g2, grid.x, grid.y, grid.width, grid.height);
         g2.setColor(Color.WHITE);
-        g2.drawRect(grid.x + 2, grid.y + 2, grid.width - 4, grid.height - 4);
+        Raster.drawRect(g2, grid.x + 2, grid.y + 2, grid.width - 4, grid.height - 4);
         g2.setStroke(new BasicStroke(1f));
         g2.setColor(new Color(192, 192, 192));
-        g2.fillRect(grid.x + 2, grid.y + 2, grid.width - 4, grid.height - 4);
+        Raster.fillRect(g2, grid.x + 2, grid.y + 2, grid.width - 4, grid.height - 4);
     }
 
     private static boolean isMine(int col, int row) {
@@ -740,9 +1094,9 @@ final class MinesweeperWidget {
 
     private static void drawMineCell(Graphics2D g2, int x, int y, int w, int h, boolean isHitCell) {
         g2.setColor(isHitCell ? new Color(230, 80, 80) : new Color(192, 192, 192));
-        g2.fillRect(x, y, w, h);
+        Raster.fillRect(g2, x, y, w, h);
         g2.setColor(Color.BLACK);
-        g2.drawRect(x, y, w, h);
+        Raster.drawRect(g2, x, y, w, h);
 
         int bombCenterX = x + w / 2;
         int bombCenterY = y + h / 2;
@@ -756,21 +1110,21 @@ final class MinesweeperWidget {
             int sy1 = (int) (bombCenterY + Math.sin(rad) * 2);
             int sx2 = (int) (bombCenterX + Math.cos(rad) * (bombRadius + 1));
             int sy2 = (int) (bombCenterY + Math.sin(rad) * (bombRadius + 1));
-            g2.drawLine(sx1, sy1, sx2, sy2);
+            Raster.drawLine(g2, sx1, sy1, sx2, sy2);
         }
         g2.setStroke(new BasicStroke(1f));
 
         g2.setColor(Color.BLACK);
-        g2.fillOval(bombCenterX - bombRadius + 1, bombCenterY - bombRadius + 1, (bombRadius - 1) * 2, (bombRadius - 1) * 2);
+        Raster.fillOval(g2, bombCenterX - bombRadius + 1, bombCenterY - bombRadius + 1, (bombRadius - 1) * 2, (bombRadius - 1) * 2);
         g2.setColor(Color.WHITE);
-        g2.fillOval(bombCenterX - 2, bombCenterY - 2, 2, 2);
+        Raster.fillOval(g2, bombCenterX - 2, bombCenterY - 2, 2, 2);
     }
 
     private static void drawOpenCell(Graphics2D g2, int x, int y, int w, int h, int value) {
         g2.setColor(new Color(180, 180, 180));
-        g2.fillRect(x, y, w, h);
+        Raster.fillRect(g2, x, y, w, h);
         g2.setColor(new Color(128, 128, 128));
-        g2.drawRect(x, y, w, h);
+        Raster.drawRect(g2, x, y, w, h);
 
         if (value <= 0) return;
 
@@ -798,7 +1152,7 @@ final class MinesweeperWidget {
         stem.lineTo(cx, top);
         stem.lineTo(cx, bottom);
         g2.draw(stem);
-        g2.drawLine(cx - 4, bottom, cx + 4, bottom);
+        Raster.drawLine(g2, cx - 4, bottom, cx + 4, bottom);
         g2.setStroke(new BasicStroke(1f));
     }
 
@@ -820,21 +1174,21 @@ final class MinesweeperWidget {
     // Fallback marker shape for any other adjacent-mine count
     private static void drawDigitDot(Graphics2D g2, int x, int y, int w, int h) {
         int r = 4;
-        g2.fillOval(x + w / 2 - r, y + h / 2 - r, r * 2, r * 2);
+        Raster.fillOval(g2, x + w / 2 - r, y + h / 2 - r, r * 2, r * 2);
     }
 
     private static void drawClosedCell(Graphics2D g2, int x, int y, int w, int h) {
         g2.setColor(new Color(192, 192, 192));
-        g2.fillRect(x, y, w, h);
+        Raster.fillRect(g2, x, y, w, h);
 
         g2.setColor(Color.WHITE);
         g2.setStroke(new BasicStroke(1.5f));
-        g2.drawLine(x, y, x + w - 1, y);
-        g2.drawLine(x, y, x, y + h - 1);
+        Raster.drawLine(g2, x, y, x + w - 1, y);
+        Raster.drawLine(g2, x, y, x, y + h - 1);
 
         g2.setColor(new Color(128, 128, 128));
-        g2.drawLine(x + w - 1, y, x + w - 1, y + h - 1);
-        g2.drawLine(x, y + h - 1, x + w - 1, y + h - 1);
+        Raster.drawLine(g2, x + w - 1, y, x + w - 1, y + h - 1);
+        Raster.drawLine(g2, x, y + h - 1, x + w - 1, y + h - 1);
         g2.setStroke(new BasicStroke(1f));
     }
 
@@ -875,14 +1229,14 @@ final class Win7Scene {
     private static void drawDesktop(Graphics2D g2) {
         GradientPaint sky = new GradientPaint(0, 0, new Color(15, 95, 185), 0, Canvas.H, new Color(5, 45, 105));
         g2.setPaint(sky);
-        g2.fillRect(0, 0, Canvas.W, Canvas.H);
+        Raster.fillRect(g2, 0, 0, Canvas.W, Canvas.H);
 
         RadialGradientPaint glow = new RadialGradientPaint(
                 new Point2D.Float(Canvas.W / 2f, Canvas.H / 2f - 30), 350f,
                 new float[]{0.0f, 1.0f},
                 new Color[]{new Color(55, 175, 245, 160), new Color(0, 0, 0, 0)});
         g2.setPaint(glow);
-        g2.fillRect(0, 0, Canvas.W, Canvas.H);
+        Raster.fillRect(g2, 0, 0, Canvas.W, Canvas.H);
 
         drawRibbons(g2);
         drawCenterLogo(g2, Canvas.W / 2, Canvas.H / 2 - 30);
@@ -969,20 +1323,20 @@ final class Win7Taskbar {
         int y = Canvas.H - Canvas.TASKBAR_H;
 
         g2.setColor(new Color(15, 30, 50, 210));
-        g2.fillRect(0, y, Canvas.W, Canvas.TASKBAR_H);
+        Raster.fillRect(g2, 0, y, Canvas.W, Canvas.TASKBAR_H);
 
         g2.setColor(new Color(255, 255, 255, 90));
-        g2.fillRect(0, y, Canvas.W, 1);
+        Raster.fillRect(g2, 0, y, Canvas.W, 1);
         g2.setColor(new Color(255, 255, 255, 25));
-        g2.fillRect(0, y + 1, Canvas.W, 1);
+        Raster.fillRect(g2, 0, y + 1, Canvas.W, 1);
 
         drawStartOrb(g2, y);
 
         // Draw the small "Show Desktop" button in the corner
         g2.setColor(new Color(255, 255, 255, 35));
-        g2.fillRect(Canvas.W - 14, y + 2, 10, Canvas.TASKBAR_H - 4);
+        Raster.fillRect(g2, Canvas.W - 14, y + 2, 10, Canvas.TASKBAR_H - 4);
         g2.setColor(new Color(0, 0, 0, 80));
-        g2.drawRect(Canvas.W - 14, y + 2, 10, Canvas.TASKBAR_H - 4);
+        Raster.drawRect(g2, Canvas.W - 14, y + 2, 10, Canvas.TASKBAR_H - 4);
 
         drawClock(g2, y);
     }
@@ -997,25 +1351,25 @@ final class Win7Taskbar {
                 new float[]{0.0f, 0.7f, 1.0f},
                 new Color[]{new Color(85, 175, 250), new Color(15, 85, 180), new Color(5, 35, 95)});
         g2.setPaint(orbGrad);
-        g2.fillOval(orbX - orbR, orbY - orbR, orbR * 2, orbR * 2);
+        Raster.fillOval(g2, orbX - orbR, orbY - orbR, orbR * 2, orbR * 2);
 
         g2.setColor(new Color(10, 30, 70, 200));
-        g2.drawOval(orbX - orbR, orbY - orbR, orbR * 2, orbR * 2);
+        Raster.drawOval(g2, orbX - orbR, orbY - orbR, orbR * 2, orbR * 2);
 
         int fs = 5;
         int fx = orbX - 5, fy = orbY - 5;
         g2.setColor(new Color(245, 95, 65));
-        g2.fillRect(fx, fy, fs, fs);
+        Raster.fillRect(g2, fx, fy, fs, fs);
         g2.setColor(new Color(135, 215, 65));
-        g2.fillRect(fx + fs + 1, fy, fs, fs);
+        Raster.fillRect(g2, fx + fs + 1, fy, fs, fs);
         g2.setColor(new Color(40, 155, 245));
-        g2.fillRect(fx, fy + fs + 1, fs, fs);
+        Raster.fillRect(g2, fx, fy + fs + 1, fs, fs);
         g2.setColor(new Color(255, 210, 45));
-        g2.fillRect(fx + fs + 1, fy + fs + 1, fs, fs);
+        Raster.fillRect(g2, fx + fs + 1, fy + fs + 1, fs, fs);
 
         g2.setPaint(new GradientPaint(orbX, orbY - orbR, new Color(255, 255, 255, 160),
                 orbX, orbY, new Color(255, 255, 255, 0)));
-        g2.fillOval(orbX - orbR + 2, orbY - orbR + 1, (orbR - 2) * 2, orbR);
+        Raster.fillOval(g2, orbX - orbR + 2, orbY - orbR + 1, (orbR - 2) * 2, orbR);
     }
 
     private static void drawClock(Graphics2D g2, int y) {
@@ -1070,7 +1424,7 @@ final class Win7MinecraftWindow {
         g2.setClip(savedClip);
 
         g2.setColor(new Color(0, 0, 0, 150));
-        g2.drawRect(clientX - 1, clientY - 1, clientW + 1, clientH + 1);
+        Raster.drawRect(g2, clientX - 1, clientY - 1, clientW + 1, clientH + 1);
     }
 
     private static void drawTitleBarButtons(Graphics2D g2, Rectangle b) {
@@ -1082,22 +1436,22 @@ final class Win7MinecraftWindow {
         g2.fill(new RoundRectangle2D.Double(closeX, buttonY, bw, bh, 4, 4));
         g2.setColor(Color.WHITE);
         g2.setStroke(new BasicStroke(1.5f));
-        g2.drawLine(closeX + 9, buttonY + 5, closeX + bw - 9, buttonY + bh - 5);
-        g2.drawLine(closeX + bw - 9, buttonY + 5, closeX + 9, buttonY + bh - 5);
+        Raster.drawLine(g2, closeX + 9, buttonY + 5, closeX + bw - 9, buttonY + bh - 5);
+        Raster.drawLine(g2, closeX + bw - 9, buttonY + 5, closeX + 9, buttonY + bh - 5);
 
         int maximizeX = closeX - bw - 2;
         g2.setPaint(new GradientPaint(maximizeX, buttonY, new Color(225, 240, 250, 160),
                 maximizeX, buttonY + bh, new Color(175, 200, 220, 190)));
         g2.fill(new RoundRectangle2D.Double(maximizeX, buttonY, bw, bh, 4, 4));
         g2.setColor(new Color(40, 50, 65));
-        g2.drawRect(maximizeX + 8, buttonY + 4, 9, 8);
+        Raster.drawRect(g2, maximizeX + 8, buttonY + 4, 9, 8);
 
         int minimizeX = maximizeX - bw - 2;
         g2.setPaint(new GradientPaint(minimizeX, buttonY, new Color(225, 240, 250, 160),
                 minimizeX, buttonY + bh, new Color(175, 200, 220, 190)));
         g2.fill(new RoundRectangle2D.Double(minimizeX, buttonY, bw, bh, 4, 4));
         g2.setColor(new Color(40, 50, 65));
-        g2.drawLine(minimizeX + 8, buttonY + 11, minimizeX + 16, buttonY + 11);
+        Raster.drawLine(g2, minimizeX + 8, buttonY + 11, minimizeX + 16, buttonY + 11);
         g2.setStroke(new BasicStroke(1f));
     }
 }
@@ -1128,24 +1482,24 @@ final class MinecraftScene {
 
     private static void drawSky(Graphics2D g2, int cx, int cy, int cw, int ch) {
         g2.setColor(new Color(10, 15, 30));
-        g2.fillRect(cx, cy, cw, ch);
+        Raster.fillRect(g2, cx, cy, cw, ch);
 
         g2.setColor(Color.WHITE);
-        g2.fillRect(cx + 30, cy + 20, 2, 2);
-        g2.fillRect(cx + 120, cy + 40, 2, 2);
-        g2.fillRect(cx + 250, cy + 15, 2, 2);
-        g2.fillRect(cx + 380, cy + 50, 2, 2);
-        g2.fillRect(cx + 90, cy + 70, 2, 2);
+        Raster.fillRect(g2, cx + 30, cy + 20, 2, 2);
+        Raster.fillRect(g2, cx + 120, cy + 40, 2, 2);
+        Raster.fillRect(g2, cx + 250, cy + 15, 2, 2);
+        Raster.fillRect(g2, cx + 380, cy + 50, 2, 2);
+        Raster.fillRect(g2, cx + 90, cy + 70, 2, 2);
     }
 
     private static void drawSun(Graphics2D g2, int cx, int cy, int cw) {
         g2.setColor(new Color(240, 240, 220));
-        g2.fillRect(cx + cw - 60, cy + 20, 24, 24);
+        Raster.fillRect(g2, cx + cw - 60, cy + 20, 24, 24);
     }
 
     private static void drawDistantMountain(Graphics2D g2, int cx, int cy) {
         g2.setColor(new Color(35, 25, 20));
-        g2.fillPolygon(
+        Raster.fillPolygon(g2, 
                 new int[]{cx, cx + 130, cx + 180, cx},
                 new int[]{cy + 130, cy + 40, cy + 150, cy + 150}, 4);
     }
@@ -1153,30 +1507,30 @@ final class MinecraftScene {
     private static void drawHouse(Graphics2D g2, int cx, int cy, int cw) {
         int hx = cx + cw - 120, hy = cy + 70;
         g2.setColor(new Color(110, 75, 35));
-        g2.fillRect(hx, hy, 90, 70);
+        Raster.fillRect(g2, hx, hy, 90, 70);
         g2.setColor(new Color(70, 50, 25));
-        g2.fillRect(hx, hy, 10, 70);
-        g2.fillRect(hx + 80, hy, 10, 70);
-        g2.fillRect(hx, hy, 90, 8);
+        Raster.fillRect(g2, hx, hy, 10, 70);
+        Raster.fillRect(g2, hx + 80, hy, 10, 70);
+        Raster.fillRect(g2, hx, hy, 90, 8);
         g2.setColor(new Color(160, 210, 230, 180));
-        g2.fillRect(hx + 35, hy + 25, 20, 20);
+        Raster.fillRect(g2, hx + 35, hy + 25, 20, 20);
         g2.setColor(new Color(50, 35, 20));
-        g2.drawRect(hx + 35, hy + 25, 20, 20);
+        Raster.drawRect(g2, hx + 35, hy + 25, 20, 20);
 
         g2.setColor(new Color(90, 90, 90));
-        g2.fillRect(hx - 10, hy - 12, 110, 14);
+        Raster.fillRect(g2, hx - 10, hy - 12, 110, 14);
     }
 
     private static void drawSand(Graphics2D g2, int cx, int cy, int cw, int ch) {
         g2.setColor(new Color(210, 195, 140));
-        g2.fillRect(cx, cy + 140, cw, ch - 140);
+        Raster.fillRect(g2, cx, cy + 140, cw, ch - 140);
 
         g2.setColor(new Color(190, 175, 120));
         for (int i = 0; i < cw; i += 24) {
-            g2.drawLine(cx + i, cy + 140, cx + i - 40, cy + ch);
+            Raster.drawLine(g2, cx + i, cy + 140, cx + i - 40, cy + ch);
         }
         for (int j = 140; j < ch; j += 20) {
-            g2.drawLine(cx, cy + j, cx + cw, cy + j);
+            Raster.drawLine(g2, cx, cy + j, cx + cw, cy + j);
         }
     }
 
@@ -1187,32 +1541,32 @@ final class MinecraftScene {
         int cry = cy + 95;
 
         g2.setColor(new Color(0, 0, 0, 70));
-        g2.fillOval(crx - 6, cry + 80, 52, 16);
+        Raster.fillOval(g2, crx - 6, cry + 80, 52, 16);
 
         g2.setColor(flashing ? new Color(220, 255, 220) : new Color(75, 170, 60));
-        g2.fillRect(crx, cry, 40, 40);
+        Raster.fillRect(g2, crx, cry, 40, 40);
 
         g2.setColor(flashing ? new Color(150, 180, 150) : Color.BLACK);
-        g2.fillRect(crx + 6, cry + 10, 9, 9);
-        g2.fillRect(crx + 25, cry + 10, 9, 9);
-        g2.fillRect(crx + 15, cry + 19, 10, 14);
-        g2.fillRect(crx + 11, cry + 24, 18, 12);
-        g2.fillRect(crx + 11, cry + 32, 5, 5);
-        g2.fillRect(crx + 24, cry + 32, 5, 5);
+        Raster.fillRect(g2, crx + 6, cry + 10, 9, 9);
+        Raster.fillRect(g2, crx + 25, cry + 10, 9, 9);
+        Raster.fillRect(g2, crx + 15, cry + 19, 10, 14);
+        Raster.fillRect(g2, crx + 11, cry + 24, 18, 12);
+        Raster.fillRect(g2, crx + 11, cry + 32, 5, 5);
+        Raster.fillRect(g2, crx + 24, cry + 32, 5, 5);
 
         g2.setColor(flashing ? new Color(200, 245, 200) : new Color(65, 155, 50));
-        g2.fillRect(crx + 6, cry + 40, 28, 36);
+        Raster.fillRect(g2, crx + 6, cry + 40, 28, 36);
 
         double legSwing = Math.sin(t * 12) * 4;
         g2.setColor(flashing ? new Color(180, 230, 180) : new Color(50, 130, 40));
-        g2.fillRect(crx + 3, cry + 72 + (int) legSwing, 14, 16);
-        g2.fillRect(crx + 23, cry + 72 - (int) legSwing, 14, 16);
+        Raster.fillRect(g2, crx + 3, cry + 72 + (int) legSwing, 14, 16);
+        Raster.fillRect(g2, crx + 23, cry + 72 - (int) legSwing, 14, 16);
 
         if (flashing) {
             g2.setColor(new Color(255, 255, 255, 160));
             g2.setStroke(new BasicStroke(3f));
-            g2.drawRect(crx - 2, cry - 2, 44, 44);
-            g2.drawRect(crx + 4, cry + 38, 32, 52);
+            Raster.drawRect(g2, crx - 2, cry - 2, 44, 44);
+            Raster.drawRect(g2, crx + 4, cry + 38, 32, 52);
             g2.setStroke(new BasicStroke(1f));
         }
     }
@@ -1221,8 +1575,8 @@ final class MinecraftScene {
         int midX = cx + cw / 2;
         int midY = cy + ch / 2;
         g2.setColor(new Color(255, 255, 255, 200));
-        g2.fillRect(midX - 6, midY - 1, 13, 3);
-        g2.fillRect(midX - 1, midY - 6, 3, 13);
+        Raster.fillRect(g2, midX - 6, midY - 1, 13, 3);
+        Raster.fillRect(g2, midX - 1, midY - 6, 3, 13);
     }
 
 private static void drawSword(Graphics2D g2, int cx, int cy, int cw, int ch) {
@@ -1271,41 +1625,41 @@ private static void drawSword(Graphics2D g2, int cx, int cy, int cw, int ch) {
 
         g2.setColor(new Color(220, 20, 20));
         for (int i = 0; i < 10; i++) {
-            g2.fillRect(hudX + (i * 8), hudY - 16, 6, 6);
+            Raster.fillRect(g2, hudX + (i * 8), hudY - 16, 6, 6);
         }
         g2.setColor(new Color(180, 110, 40));
         for (int i = 0; i < 10; i++) {
-            g2.fillRect(hudX + 100 + (i * 8), hudY - 16, 6, 6);
+            Raster.fillRect(g2, hudX + 100 + (i * 8), hudY - 16, 6, 6);
         }
 
         g2.setColor(new Color(90, 215, 50));
-        g2.fillRect(hudX, hudY - 6, 180, 3);
+        Raster.fillRect(g2, hudX, hudY - 6, 180, 3);
         g2.setColor(new Color(40, 40, 40));
-        g2.drawRect(hudX - 1, hudY - 7, 182, 5);
+        Raster.drawRect(g2, hudX - 1, hudY - 7, 182, 5);
 
         g2.setColor(new Color(140, 140, 140, 210));
-        g2.fillRect(hudX, hudY, 180, 20);
+        Raster.fillRect(g2, hudX, hudY, 180, 20);
         g2.setColor(Color.BLACK);
-        g2.drawRect(hudX, hudY, 180, 20);
+        Raster.drawRect(g2, hudX, hudY, 180, 20);
         for (int i = 0; i < 9; i++) {
-            g2.drawRect(hudX + (i * 20), hudY, 20, 20);
+            Raster.drawRect(g2, hudX + (i * 20), hudY, 20, 20);
         }
 
         g2.setColor(Color.WHITE);
         g2.setStroke(new BasicStroke(2f));
-        g2.drawRect(hudX + 19, hudY - 1, 22, 22);
+        Raster.drawRect(g2, hudX + 19, hudY - 1, 22, 22);
         g2.setStroke(new BasicStroke(1f));
 
         g2.setColor(new Color(160, 160, 160));
-        g2.fillRect(hudX + 6, hudY + 4, 8, 12);
+        Raster.fillRect(g2, hudX + 6, hudY + 4, 8, 12);
         g2.setColor(new Color(180, 220, 240));
-        g2.fillRect(hudX + 26, hudY + 4, 8, 12);
+        Raster.fillRect(g2, hudX + 26, hudY + 4, 8, 12);
         g2.setColor(new Color(160, 160, 160));
-        g2.fillRect(hudX + 46, hudY + 4, 8, 12);
+        Raster.fillRect(g2, hudX + 46, hudY + 4, 8, 12);
         g2.setColor(new Color(230, 210, 140));
-        g2.fillRect(hudX + 126, hudY + 6, 10, 8);
+        Raster.fillRect(g2, hudX + 126, hudY + 6, 10, 8);
         g2.setColor(new Color(255, 200, 50));
-        g2.fillRect(hudX + 148, hudY + 4, 4, 12);
+        Raster.fillRect(g2, hudX + 148, hudY + 4, 4, 12);
     }
 }
 
@@ -1324,14 +1678,14 @@ final class Win11Scene {
         GradientPaint bg = new GradientPaint(
                 0, 0, new Color(165, 195, 225), Canvas.W, Canvas.H, new Color(195, 215, 238));
         g2.setPaint(bg);
-        g2.fillRect(0, 0, Canvas.W, Canvas.H);
+        Raster.fillRect(g2, 0, 0, Canvas.W, Canvas.H);
 
         RadialGradientPaint centerGlow = new RadialGradientPaint(
                 new Point2D.Float(Canvas.W * 0.5f, Canvas.H * 0.4f), 400f,
                 new float[]{0.0f, 1.0f},
                 new Color[]{new Color(230, 242, 255, 180), new Color(165, 195, 225, 0)});
         g2.setPaint(centerGlow);
-        g2.fillRect(0, 0, Canvas.W, Canvas.H);
+        Raster.fillRect(g2, 0, 0, Canvas.W, Canvas.H);
 
         drawBloomPetals(g2);
     }
@@ -1387,9 +1741,9 @@ final class Win11Taskbar {
         int y = Canvas.H - Canvas.TASKBAR_H;
 
         g2.setColor(new Color(243, 243, 243, 235));
-        g2.fillRect(0, y, Canvas.W, Canvas.TASKBAR_H);
+        Raster.fillRect(g2, 0, y, Canvas.W, Canvas.TASKBAR_H);
         g2.setColor(new Color(225, 225, 225));
-        g2.fillRect(0, y, Canvas.W, 1);
+        Raster.fillRect(g2, 0, y, Canvas.W, 1);
 
         int clusterW = ICON_COUNT * ICON_SPACING;
         int startX = (Canvas.W - clusterW) / 2;
@@ -1422,52 +1776,52 @@ final class Win11Taskbar {
     private static void drawSearchIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(80, 80, 80));
         g2.setStroke(new BasicStroke(1.8f));
-        g2.drawOval(x + 1, y + 1, 12, 12);
-        g2.drawLine(x + 10, y + 10, x + 16, y + 16);
+        Raster.drawOval(g2, x + 1, y + 1, 12, 12);
+        Raster.drawLine(g2, x + 10, y + 10, x + 16, y + 16);
         g2.setStroke(new BasicStroke(1f));
     }
 
     private static void drawTaskViewIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(80, 80, 80));
         g2.setStroke(new BasicStroke(1.5f));
-        g2.drawRoundRect(x + 1, y + 3, 10, 14, 2, 2);
+        Raster.drawRoundRect(g2, x + 1, y + 3, 10, 14, 2, 2);
         g2.setColor(new Color(140, 140, 140));
-        g2.drawRoundRect(x + 6, y + 1, 10, 14, 2, 2);
+        Raster.drawRoundRect(g2, x + 6, y + 1, 10, 14, 2, 2);
         g2.setStroke(new BasicStroke(1f));
     }
 
     private static void drawWidgetsIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(0, 120, 215));
-        g2.fillRoundRect(x + 1, y + 2, 8, 16, 2, 2);
+        Raster.fillRoundRect(g2, x + 1, y + 2, 8, 16, 2, 2);
         g2.setColor(new Color(0, 164, 239));
-        g2.fillRoundRect(x + 10, y + 2, 8, 16, 2, 2);
+        Raster.fillRoundRect(g2, x + 10, y + 2, 8, 16, 2, 2);
     }
 
     private static void drawTeamsIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(75, 70, 185));
-        g2.fillOval(x + 1, y + 1, 18, 18);
+        Raster.fillOval(g2, x + 1, y + 1, 18, 18);
         g2.setColor(Color.WHITE);
     }
 
     private static void drawFileExplorerIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(245, 180, 35));
-        g2.fillRoundRect(x + 1, y + 4, 18, 13, 3, 3);
+        Raster.fillRoundRect(g2, x + 1, y + 4, 18, 13, 3, 3);
         g2.setColor(new Color(0, 120, 215));
-        g2.fillRect(x + 4, y + 2, 7, 3);
+        Raster.fillRect(g2, x + 4, y + 2, 7, 3);
     }
 
     private static void drawEdgeIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(15, 140, 205));
-        g2.fillOval(x + 1, y + 1, 18, 18);
+        Raster.fillOval(g2, x + 1, y + 1, 18, 18);
         g2.setColor(new Color(40, 200, 175));
-        g2.fillOval(x + 5, y + 5, 10, 10);
+        Raster.fillOval(g2, x + 5, y + 5, 10, 10);
     }
 
     private static void drawStoreIcon(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(0, 120, 215));
-        g2.fillRoundRect(x + 2, y + 5, 16, 13, 2, 2);
+        Raster.fillRoundRect(g2, x + 2, y + 5, 16, 13, 2, 2);
         g2.setStroke(new BasicStroke(1.5f));
-        g2.drawArc(x + 5, y + 1, 10, 8, 0, 180);
+        Raster.drawArc(g2, x + 5, y + 1, 10, 8, 0, 180);
         g2.setStroke(new BasicStroke(1f));
     }
 
@@ -1477,12 +1831,12 @@ final class Win11Taskbar {
 
         int iconX = trayX + 28;
         g2.setStroke(new BasicStroke(1.2f));
-        g2.drawArc(iconX, taskbarY + 11, 11, 11, 45, 90);
-        g2.drawArc(iconX + 2, taskbarY + 14, 7, 7, 45, 90);
+        Raster.drawArc(g2, iconX, taskbarY + 11, 11, 11, 45, 90);
+        Raster.drawArc(g2, iconX + 2, taskbarY + 14, 7, 7, 45, 90);
         g2.setStroke(new BasicStroke(1f));
 
         g2.setColor(new Color(0, 103, 192));
-        g2.fillOval(Canvas.W - 18, taskbarY + 11, 12, 12);
+        Raster.fillOval(g2, Canvas.W - 18, taskbarY + 11, 12, 12);
         g2.setColor(Color.WHITE);
     }
 }
@@ -1497,7 +1851,7 @@ final class BlackScene {
 
     static void draw(Graphics2D g2, double t) {
         g2.setColor(Color.BLACK);
-        g2.fillRect(0, 0, Canvas.W, Canvas.H);
+        Raster.fillRect(g2, 0, 0, Canvas.W, Canvas.H);
 
         SahurCharacter.draw(g2, SAHUR_X, SAHUR_Y, SAHUR_SCALE);
     }
@@ -1556,22 +1910,22 @@ final class SahurCharacter {
     private static void drawLegs(Graphics2D g2) {
         g2.setColor(WOOD_SHADOW);
         g2.setStroke(new BasicStroke(5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g2.drawLine(-12, 60, -10, 130);
+        Raster.drawLine(g2, -12, 60, -10, 130);
 
-        g2.fillOval(-35, 125, 35, 16); 
-        g2.fillOval(-42, 127, 14, 12); 
-        g2.fillOval(-38, 133, 12, 10); 
-        g2.fillOval(-32, 135, 10, 8);
-        g2.fillOval(-25, 136, 10, 7);
+        Raster.fillOval(g2, -35, 125, 35, 16); 
+        Raster.fillOval(g2, -42, 127, 14, 12); 
+        Raster.fillOval(g2, -38, 133, 12, 10); 
+        Raster.fillOval(g2, -32, 135, 10, 8);
+        Raster.fillOval(g2, -25, 136, 10, 7);
 
         g2.setColor(WOOD_BASE);
-        g2.drawLine(15, 60, 18, 135);
+        Raster.drawLine(g2, 15, 60, 18, 135);
 
-        g2.fillOval(5, 130, 35, 18);
-        g2.fillOval(32, 132, 14, 14); 
-        g2.fillOval(28, 139, 12, 11);
-        g2.fillOval(20, 142, 10, 9);
-        g2.fillOval(12, 143, 10, 8);
+        Raster.fillOval(g2, 5, 130, 35, 18);
+        Raster.fillOval(g2, 32, 132, 14, 14); 
+        Raster.fillOval(g2, 28, 139, 12, 11);
+        Raster.fillOval(g2, 20, 142, 10, 9);
+        Raster.fillOval(g2, 12, 143, 10, 8);
         g2.setStroke(new BasicStroke(1f));
     }
 
@@ -1585,7 +1939,7 @@ final class SahurCharacter {
         g2.draw(arm);
         g2.setStroke(new BasicStroke(1f));
 
-        g2.fillOval(-26, 40, 12, 12); 
+        Raster.fillOval(g2, -26, 40, 12, 12); 
     }
 
     private static void drawViewerRightArm(Graphics2D g2) {
@@ -1603,7 +1957,7 @@ final class SahurCharacter {
         g2.setStroke(new BasicStroke(1f));
 
         g2.setColor(WOOD_BASE);
-        g2.fillOval(20, 42, 11, 13);
+        Raster.fillOval(g2, 20, 42, 11, 13);
     }
 
     private static void drawBody(Graphics2D g2) {
@@ -1639,35 +1993,35 @@ final class SahurCharacter {
 
     private static void drawFace(Graphics2D g2) {
         g2.setColor(WOOD_DARK);
-        g2.fillOval(-28, -85, 24, 28);
+        Raster.fillOval(g2, -28, -85, 24, 28);
         g2.setColor(WOOD_SHADOW);
-        g2.fillOval(-30, -83, 22, 26);
+        Raster.fillOval(g2, -30, -83, 22, 26);
 
         g2.setColor(EYE_WHITE);
-        g2.fillOval(-26, -82, 18, 22);
+        Raster.fillOval(g2, -26, -82, 18, 22);
 
         g2.setColor(EYE_PUPIL);
-        g2.fillOval(-22, -77, 10, 12);
+        Raster.fillOval(g2, -22, -77, 10, 12);
         g2.setColor(Color.WHITE);
-        g2.fillOval(-19, -75, 4, 4);
+        Raster.fillOval(g2, -19, -75, 4, 4);
 
         g2.setColor(WOOD_DARK);
-        g2.fillOval(0, -90, 32, 34);
+        Raster.fillOval(g2, 0, -90, 32, 34);
         g2.setColor(WOOD_BASE);
-        g2.fillOval(-2, -88, 30, 32);
+        Raster.fillOval(g2, -2, -88, 30, 32);
 
         g2.setColor(EYE_WHITE);
-        g2.fillOval(2, -87, 25, 28);
+        Raster.fillOval(g2, 2, -87, 25, 28);
 
         g2.setColor(EYE_PUPIL);
-        g2.fillOval(8, -81, 14, 16);
+        Raster.fillOval(g2, 8, -81, 14, 16);
         g2.setColor(Color.WHITE);
-        g2.fillOval(12, -78, 5, 5);
+        Raster.fillOval(g2, 12, -78, 5, 5);
 
         g2.setColor(WOOD_LIGHT);
         g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g2.drawArc(2, -95, 25, 15, 45, 100);
-        g2.drawArc(-26, -88, 18, 12, 45, 100);
+        Raster.drawArc(g2, 2, -95, 25, 15, 45, 100);
+        Raster.drawArc(g2, -26, -88, 18, 12, 45, 100);
         g2.setStroke(new BasicStroke(1f));
 
         Path2D nose = new Path2D.Double();
@@ -1679,11 +2033,11 @@ final class SahurCharacter {
         g2.setColor(WOOD_BASE);
         g2.fill(nose);
         g2.setColor(WOOD_LIGHT);
-        g2.fillPolygon(new int[]{-5, -14, 0}, new int[]{-53, -42, -45}, 3);
+        Raster.fillPolygon(g2, new int[]{-5, -14, 0}, new int[]{-53, -42, -45}, 3);
 
         g2.setColor(WOOD_DARK);
         g2.setStroke(new BasicStroke(2f));
-        g2.drawArc(-18, -48, 12, 10, 180, 120);
+        Raster.drawArc(g2, -18, -48, 12, 10, 180, 120);
         g2.setStroke(new BasicStroke(1f));
 
         g2.setColor(WOOD_DARK);
@@ -1695,6 +2049,6 @@ final class SahurCharacter {
         g2.fill(mouth);
 
         g2.setColor(WOOD_SHADOW);
-        g2.drawArc(15, -45, 12, 20, 270, 70);
+        Raster.drawArc(g2, 15, -45, 12, 20, 270, 70);
     }
 }
