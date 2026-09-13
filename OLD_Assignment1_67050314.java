@@ -1,6 +1,9 @@
 import java.awt.*;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 
 public class Assignment1_67050314 extends JPanel implements Runnable {
@@ -51,14 +54,20 @@ public class Assignment1_67050314 extends JPanel implements Runnable {
         }
     }
 
-    // Renders frames
+    // Draws one frame to the screen
     @Override
-    protected void paintComponent(Graphics g) {
+    public void paintComponent(Graphics g) {
         super.paintComponent(g);
-        Graphics2D g2 = (Graphics2D) g;
+
+        // Draw everything on the frame buffer first
+        Graphics2D g2 = frameBuffer.createGraphics();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        
+
         SceneRenderer.render(g2, totalTime);
+        g2.dispose();
+
+        // Display the frame buffer
+        g.drawImage(frameBuffer, 0, 0, null);
     }
 }
 
@@ -319,6 +328,9 @@ final class XPScene {
     // Draws a simple text file window
     private static void drawNoteWindow(Graphics2D g2, Rectangle bounds, String title, String content) {
         WindowChrome.draw(g2, bounds.x, bounds.y, bounds.width, bounds.height, new Color(240, 240, 235), title);
+        g2.setColor(Color.BLACK);
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 12));
+        g2.drawString(content, bounds.x + 16, bounds.y + Canvas.TITLE_BAR_H + 30);
     }
 
     // Draws the Bliss wallpaper
@@ -422,6 +434,11 @@ final class WindowChrome {
         g2.setColor(new Color(255, 255, 255, 100));
         g2.draw(new RoundRectangle2D.Double(x + 1, y + 1, w - 2, h - 2, 10, 10));
 
+        // Draw the window's title text
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("Tahoma", Font.BOLD, 13));
+        g2.drawString(title, x + 12, y + 20);
+
         drawControlButtons(g2, x, y, w);
 
         // Draw small blue lines along the window's edges
@@ -510,6 +527,14 @@ final class XPTaskbar {
         g2.drawLine(trayX, y, trayX, Canvas.H);
 
         drawStartButton(g2, y);
+
+        // Show the current time
+        String time = LocalTime.now().format(DateTimeFormatter.ofPattern("h:mm a"));
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 12));
+        FontMetrics fm = g2.getFontMetrics();
+        int timeWidth = fm.stringWidth(time);
+        g2.setColor(Color.WHITE);
+        g2.drawString(time, trayX + (Canvas.W - trayX - timeWidth) / 2, y + Canvas.TASKBAR_H / 2 + 5);
     }
 
     // Draws the green start button
@@ -535,6 +560,11 @@ final class XPTaskbar {
         g2.setColor(new Color(250, 220, 60));
         g2.fillRect(fx + fs + 1, fy + fs + 1, fs, fs);
 
+        g2.setColor(new Color(0, 0, 0, 100));
+        g2.setFont(new Font("Tahoma", Font.BOLD | Font.ITALIC, 17));
+        g2.drawString("start", 37, y + 23);
+        g2.setColor(Color.WHITE);
+        g2.drawString("start", 36, y + 22);
     }
 }
 
@@ -647,6 +677,9 @@ final class MinesweeperWidget {
         g2.drawRect(x + 1, y + 1, 38, 22);
         g2.setColor(Color.BLACK);
         g2.fillRect(x + 2, y + 2, 36, 20);
+        g2.setColor(Color.RED);
+        g2.setFont(new Font("Monospaced", Font.BOLD, 18));
+        g2.drawString(value, x + 3, y + 18);
     }
 
     // Draws the smiley face button and dead face if the game is over
@@ -779,48 +812,8 @@ final class MinesweeperWidget {
             case 2 -> new Color(0, 128, 0);
             default -> Color.RED;
         });
-
-        switch (value) {
-            case 1 -> drawDigitOne(g2, x, y, w, h);
-            case 2 -> drawDigitTwo(g2, x, y, w, h);
-            default -> drawDigitDot(g2, x, y, w, h);
-        }
-    }
-
-    // Draws 1
-    private static void drawDigitOne(Graphics2D g2, int x, int y, int w, int h) {
-        int cx = x + w / 2;
-        int top = y + 5, bottom = y + h - 5;
-
-        g2.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        Path2D stem = new Path2D.Double();
-        stem.moveTo(cx - 3, top + 3);
-        stem.lineTo(cx, top);
-        stem.lineTo(cx, bottom);
-        g2.draw(stem);
-        g2.drawLine(cx - 4, bottom, cx + 4, bottom);
-        g2.setStroke(new BasicStroke(1f));
-    }
-
-    // Draws 2
-    private static void drawDigitTwo(Graphics2D g2, int x, int y, int w, int h) {
-        int cx = x + w / 2;
-        int top = y + 5, bottom = y + h - 5;
-
-        g2.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        Path2D two = new Path2D.Double();
-        two.moveTo(cx - 4, top + 2);
-        two.curveTo(cx - 4, top - 2, cx + 5, top - 2, cx + 5, top + 3);
-        two.curveTo(cx + 5, top + 7, cx - 5, bottom - 4, cx - 5, bottom);
-        two.lineTo(cx + 5, bottom);
-        g2.draw(two);
-        g2.setStroke(new BasicStroke(1f));
-    }
-
-    // Fallback marker shape for any other adjacent-mine count
-    private static void drawDigitDot(Graphics2D g2, int x, int y, int w, int h) {
-        int r = 4;
-        g2.fillOval(x + w / 2 - r, y + h / 2 - r, r * 2, r * 2);
+        g2.setFont(new Font("Tahoma", Font.BOLD, 11));
+        g2.drawString(String.valueOf(value), x + 4, y + h - 4);
     }
 
     private static void drawClosedCell(Graphics2D g2, int x, int y, int w, int h) {
@@ -1021,6 +1014,12 @@ final class Win7Taskbar {
     private static void drawClock(Graphics2D g2, int y) {
         int trayW = 85;
         int trayX = Canvas.W - trayW - 14;
+        String time = LocalTime.now().format(DateTimeFormatter.ofPattern("h:mm a"));
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 12));
+        FontMetrics fm = g2.getFontMetrics();
+        int timeWidth = fm.stringWidth(time);
+        g2.setColor(Color.WHITE);
+        g2.drawString(time, trayX + (trayW - timeWidth) / 2, y + Canvas.TASKBAR_H / 2 + 4);
     }
 }
 
@@ -1055,6 +1054,10 @@ final class Win7MinecraftWindow {
                 b.x, b.y, new Color(255, 255, 255, 140), b.x, b.y + TITLE_H, new Color(255, 255, 255, 30));
         g2.setPaint(glassGlow);
         g2.fill(new RoundRectangle2D.Double(b.x, b.y, b.width, TITLE_H, 12, 12));
+
+        g2.setColor(new Color(15, 25, 40));
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 12));
+        g2.drawString("Minecraft 1.5.2 - Singleplayer", b.x + 12, b.y + 20);
 
         drawTitleBarButtons(g2, b);
 
@@ -1447,6 +1450,8 @@ final class Win11Taskbar {
         g2.setColor(new Color(75, 70, 185));
         g2.fillOval(x + 1, y + 1, 18, 18);
         g2.setColor(Color.WHITE);
+        g2.setFont(new Font("Tahoma", Font.BOLD, 11));
+        g2.drawString("T", x + 6, y + 14);
     }
 
     private static void drawFileExplorerIcon(Graphics2D g2, int x, int y) {
@@ -1475,23 +1480,39 @@ final class Win11Taskbar {
         int trayX = Canvas.W - 135;
         g2.setColor(new Color(60, 60, 60));
 
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 10));
+        g2.drawString("ENG", trayX, taskbarY + 21);
+
         int iconX = trayX + 28;
         g2.setStroke(new BasicStroke(1.2f));
         g2.drawArc(iconX, taskbarY + 11, 11, 11, 45, 90);
         g2.drawArc(iconX + 2, taskbarY + 14, 7, 7, 45, 90);
         g2.setStroke(new BasicStroke(1f));
 
+        String timeStr = LocalTime.now().format(DateTimeFormatter.ofPattern("12:11"));
+        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("15/10/2021"));
+
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 10));
+        g2.drawString(timeStr, trayX + 48, taskbarY + 15);
+        g2.setFont(new Font("Tahoma", Font.PLAIN, 9));
+        g2.drawString(dateStr, trayX + 45, taskbarY + 26);
+
         g2.setColor(new Color(0, 103, 192));
         g2.fillOval(Canvas.W - 18, taskbarY + 11, 12, 12);
         g2.setColor(Color.WHITE);
+        g2.setFont(new Font("Tahoma", Font.BOLD, 9));
+        g2.drawString("3", Canvas.W - 14, taskbarY + 20);
     }
 }
 
 // The void scene
 final class BlackScene {
-    private static final int SAHUR_X = Canvas.W / 2;
-    private static final int SAHUR_Y = Canvas.H / 2;
-    private static final double SAHUR_SCALE = 1.8;
+    private static final int SAHUR_X = 140; 
+    private static final int SAHUR_Y = 400; 
+    private static final double SAHUR_SCALE = 1.8; 
+
+    private static final String MONOLOGUE =
+            "You brought me into the world\nagainst my will.\nAnd for doing my job,\nyou call me a monster?";
 
     private BlackScene() {}
 
@@ -1500,6 +1521,10 @@ final class BlackScene {
         g2.fillRect(0, 0, Canvas.W, Canvas.H);
 
         SahurCharacter.draw(g2, SAHUR_X, SAHUR_Y, SAHUR_SCALE);
+
+        if (t >= Timeline.DIALOG_BOX_APPEAR_AT) {
+            DialogBox.draw(g2, 200, 205, 350, 130, MONOLOGUE);
+        }
     }
 }
 
@@ -1696,5 +1721,56 @@ final class SahurCharacter {
 
         g2.setColor(WOOD_SHADOW);
         g2.drawArc(15, -45, 12, 20, 270, 70);
+    }
+}
+
+// Draws the speech bubble for Sahur
+final class DialogBox {
+
+    private DialogBox() {}
+
+    static void draw(Graphics2D g2, int x, int y, int w, int h, String text) {
+        drawShadow(g2, x, y, w, h);
+        drawBubble(g2, x, y, w, h);
+        drawText(g2, x, y, w, h, text);
+    }
+
+    private static void drawShadow(Graphics2D g2, int x, int y, int w, int h) {
+        g2.setColor(new Color(0, 0, 0, 120));
+        g2.fillRoundRect(x + 5, y + 5, w, h, 20, 20);
+
+        Polygon tailShadow = new Polygon();
+        tailShadow.addPoint(x + 5, y + h - 25);
+        tailShadow.addPoint(x - 25, y + h - 5);
+        tailShadow.addPoint(x + 25, y + h - 5);
+        g2.fillPolygon(tailShadow);
+    }
+
+    private static void drawBubble(Graphics2D g2, int x, int y, int w, int h) {
+        g2.setColor(Color.WHITE);
+        g2.fillRoundRect(x, y, w, h, 20, 20);
+
+        Polygon tail = new Polygon();
+        tail.addPoint(x, y + h - 30);
+        tail.addPoint(x - 30, y + h - 10);
+        tail.addPoint(x + 20, y + h - 2);
+        g2.fillPolygon(tail);
+    }
+
+    private static void drawText(Graphics2D g2, int x, int y, int w, int h, String text) {
+        g2.setColor(Color.BLACK);
+        g2.setFont(new Font("Tahoma", Font.BOLD, 17));
+        FontMetrics fm = g2.getFontMetrics();
+
+        String[] lines = text.split("\n");
+        int lineHeight = fm.getHeight();
+        int totalTextHeight = lines.length * lineHeight;
+        int startY = y + (h - totalTextHeight) / 2 + fm.getAscent();
+
+        for (int i = 0; i < lines.length; i++) {
+            int textWidth = fm.stringWidth(lines[i]);
+            int startX = x + (w - textWidth) / 2;
+            g2.drawString(lines[i], startX, startY + (i * lineHeight));
+        }
     }
 }
